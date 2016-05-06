@@ -1,12 +1,5 @@
 # WarehouseDistribution
 
-A
-GENT 
-C
-OALITION
-S
-IN
-W
-AREHOUSE
-D
-ISTRIBUTION
+AGENT COALITIONS IN WAREHOUSE DISTRIBUTION
+
+![WarehouseDistribution](http://i.imgur.com/3GslPFJ.png?1)
