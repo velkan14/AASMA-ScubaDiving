@@ -27,7 +27,6 @@ public class PathfindingManager : MonoBehaviour
 	public const float PEDESTRIAN_RADIUS = 2.5f;
 
     //public fields to be set in Unity Editor
-    public GameObject endDebugSphere;
     public Camera camera;
     public GameObject characterAvatar;
 
@@ -77,15 +76,15 @@ public class PathfindingManager : MonoBehaviour
         this.InitializeDeadLock(character, obstacles);
 
         //(UN)COMMENT to use other actuator
-//        this.actuator = new HumanActuator (new AStarPathfinding(this.navMesh, new NodePriorityHeap(), new MyDictionary(), new EuclideanDistanceHeuristic()))
-//        {
-//            TargetPosition = new KinematicData(),
-//        };
-        this.actuator = new CarActuator(new AStarPathfinding(this.navMesh, new NodePriorityHeap(), new MyDictionary(), new EuclideanDistanceHeuristic()))
+        this.actuator = new HumanActuator (new AStarPathfinding(this.navMesh, new NodePriorityHeap(), new MyDictionary(), new EuclideanDistanceHeuristic()))
         {
             TargetPosition = new KinematicData(),
-            Blended = this.BlendedDeadLock
         };
+//        this.actuator = new CarActuator(new AStarPathfinding(this.navMesh, new NodePriorityHeap(), new MyDictionary(), new EuclideanDistanceHeuristic()))
+//        {
+//            TargetPosition = new KinematicData(),
+//            Blended = this.BlendedDeadLock
+//        };
 
         this.steeringPipe = new SteeringPipeline 
 		{
@@ -121,8 +120,6 @@ public class PathfindingManager : MonoBehaviour
 
                 //we're setting the end point
                 //this is just a small adjustment to better see the debug sphere
-                this.endDebugSphere.transform.position = position + Vector3.up;
-                this.endDebugSphere.SetActive(true);
                 this.endPosition = position;
                 this.draw = true;
 
