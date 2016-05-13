@@ -30,8 +30,6 @@ public class PathfindingManager : MonoBehaviour
     public GameObject endDebugSphere;
     public Camera camera;
     public GameObject characterAvatar;
-	public GameObject pedestrian;
-	public int pedestrians_Size;
 
     //private fields for internal use only
     private Vector3 startPosition;
@@ -39,10 +37,6 @@ public class PathfindingManager : MonoBehaviour
 	private NavMeshPathGraph navMesh;
 	
     private AStarPathfinding aStarPathFinding;
-
-	//Pedestrians
-	private List<DynamicCharacter> gang;
-	private DynamicCharacter firstPedestrian;
 
 	private BlendedMovement Blended;
     private BlendedMovement BlendedDeadLock;
@@ -53,7 +47,6 @@ public class PathfindingManager : MonoBehaviour
 	private SteeringPipeline steeringPipe; 
 	private Targeter targeter;
 	private Decomposer decomposer;
-	private AvoidObstacleConstraint avoidObstacleConstraint; 
 	private Actuator actuator;
 
     private bool draw;
@@ -63,15 +56,7 @@ public class PathfindingManager : MonoBehaviour
     {
         this.draw = false;
         this.navMesh = NavigationManager.Instance.NavMeshGraphs[0];
-
-        //Create secondary pedestrians
-        this.gang = new List<DynamicCharacter>();
-        pedestrian = GameObject.Find("Pedestrian");
-        this.firstPedestrian = new DynamicCharacter(pedestrian)
-        {
-            Drag = DRAG,
-            MaxSpeed = MAX_SPEED
-        };
+      
 
         var obstacles = GameObject.FindGameObjectsWithTag("Obstacle");
         this.character = new DynamicCharacter(this.characterAvatar);
@@ -87,28 +72,20 @@ public class PathfindingManager : MonoBehaviour
             //aStarPathFinding = new AStarPathfinding(this.navMesh, new NodePriorityHeap(), new MyDictionary(), new EuclideanDistanceHeuristic()),
             debugPosition = Vector3.zero
         };
-
-        this.avoidObstacleConstraint = new AvoidObstacleConstraint
-        {
-            Center = pedestrian.gameObject.transform.position,
-            Radius = PEDESTRIAN_RADIUS,
-            Margin = PEDESTRIAN_RADIUS * 2.0f,
-            Character = this.character.KinematicData
-        };
-
+				
         //Movement when character finds a deadLock (in the SteeringPipeline)
         this.InitializeDeadLock(character, obstacles);
 
         //(UN)COMMENT to use other actuator
-        this.actuator = new HumanActuator (new AStarPathfinding(this.navMesh, new NodePriorityHeap(), new MyDictionary(), new EuclideanDistanceHeuristic()))
-        {
-            TargetPosition = new KinematicData(),
-        };
-        /*this.actuator = new CarActuator(new AStarPathfinding(this.navMesh, new NodePriorityHeap(), new MyDictionary(), new EuclideanDistanceHeuristic()))
+//        this.actuator = new HumanActuator (new AStarPathfinding(this.navMesh, new NodePriorityHeap(), new MyDictionary(), new EuclideanDistanceHeuristic()))
+//        {
+//            TargetPosition = new KinematicData(),
+//        };
+        this.actuator = new CarActuator(new AStarPathfinding(this.navMesh, new NodePriorityHeap(), new MyDictionary(), new EuclideanDistanceHeuristic()))
         {
             TargetPosition = new KinematicData(),
             Blended = this.BlendedDeadLock
-        };*/
+        };
 
         this.steeringPipe = new SteeringPipeline 
 		{
@@ -123,18 +100,8 @@ public class PathfindingManager : MonoBehaviour
         };
 
 		this.steeringPipe.Decomposers.Add (this.decomposer);
-		this.steeringPipe.Constraints.Add (this.avoidObstacleConstraint);
 		this.character.Movement = this.steeringPipe;
 
-        //Clone pedestrians
-        this.gang = this.CloneSecondaryPedestrians(pedestrian, pedestrians_Size, obstacles);
-        this.gang.Add(firstPedestrian);
-        this.InitializeMainPedestrian(obstacles);
-
-        foreach (var walker in this.gang.Take(this.gang.Count-1))
-        {
-            this.InitializeSecondaryPedestrians(walker, obstacles);
-        }
     }
 
     // Update is called once per frame
@@ -162,93 +129,88 @@ public class PathfindingManager : MonoBehaviour
                 this.actuator.TargetPosition.position = position; 
             }
         }
-        this.firstPedestrian.Movement = this.Blended;
-        for(int i = 0; i < this.gang.Count; i++)
-		{
-            this.gang[i].Movement = this.Blended;
-			this.UpdateMovingGameObject(this.gang[i], i);
-		}
+       
         this.character.Update();
         this.character.Movement.Character.position.y = 0.0f;
     }
 
-    public void OnGUI()
-    {
-        if (this.decomposer.getCurrentSolution() != null)
-        {
-            var time = this.decomposer.aStarPathFinding.TotalProcessingTime * 1000;
-            float timePerNode;
-            if (this.decomposer.aStarPathFinding.TotalProcessedNodes > 0)
-            {
-                timePerNode = time / this.decomposer.aStarPathFinding.TotalProcessedNodes;
-            }
-            else
-            {
-                timePerNode = 0;
-            }
-            var text = "Nodes Visited: " + this.decomposer.aStarPathFinding.TotalProcessedNodes
-                       + "\nMaximum Open Size: " + this.decomposer.aStarPathFinding.MaxOpenNodes
-                       + "\nProcessing time (ms): " + time
-                       + "\nTime per Node (ms):" + timePerNode;
-            GUI.contentColor = Color.black;
-            GUI.Label(new Rect(10, 10, 200, 100), text);
-        }
-    }
+//    public void OnGUI()
+//    {
+//        if (this.decomposer.getCurrentSolution() != null)
+//        {
+//            var time = this.decomposer.aStarPathFinding.TotalProcessingTime * 1000;
+//            float timePerNode;
+//            if (this.decomposer.aStarPathFinding.TotalProcessedNodes > 0)
+//            {
+//                timePerNode = time / this.decomposer.aStarPathFinding.TotalProcessedNodes;
+//            }
+//            else
+//            {
+//                timePerNode = 0;
+//            }
+//            var text = "Nodes Visited: " + this.decomposer.aStarPathFinding.TotalProcessedNodes
+//                       + "\nMaximum Open Size: " + this.decomposer.aStarPathFinding.MaxOpenNodes
+//                       + "\nProcessing time (ms): " + time
+//                       + "\nTime per Node (ms):" + timePerNode;
+//            GUI.contentColor = Color.black;
+//            GUI.Label(new Rect(10, 10, 200, 100), text);
+//        }
+//    }
 
-    public void OnDrawGizmos()
-    {
-        if (this.draw)
-        {
-            //draw the current Solution Path if any (for debug purposes)
-            if (this.decomposer.getCurrentSolution() != null)
-            {
-                var previousPosition = this.startPosition;
-                foreach (var pathPosition in this.actuator.currentSolution.PathPositions)
-                {
-                    Debug.DrawLine(previousPosition, pathPosition, Color.red);
-                    previousPosition = pathPosition;
-                }
-
-               previousPosition = this.startPosition;
-                foreach (var pathPosition in this.actuator.currentSmoothedSolution.PathPositions)
-                {
-                    Debug.DrawLine(previousPosition, pathPosition, Color.green);
-                    previousPosition = pathPosition;
-                }
-            }
-
-            //draw the nodes in Open and Closed Sets
-            if (this.decomposer.aStarPathFinding != null)
-            {
-                Gizmos.color = Color.cyan;
-
-                if (this.decomposer.aStarPathFinding.Open != null)
-                {
-                    foreach (var nodeRecord in this.decomposer.aStarPathFinding.Open.All())
-                    {
-                        Gizmos.DrawSphere(nodeRecord.node.LocalPosition, 1.0f);
-                    }
-                }
-
-                Gizmos.color = Color.blue;
-
-                if (this.decomposer.aStarPathFinding.Closed != null)
-                {
-                    foreach (var nodeRecord in this.decomposer.aStarPathFinding.Closed.All())
-                    {
-                        Gizmos.DrawSphere(nodeRecord.node.LocalPosition, 1.0f);
-                    }
-                }
-            }
-
-            /*Gizmos.color = Color.yellow;
-            //draw the target for the follow path movement
-            if (this.character.Movement != null)
-            {
-                Gizmos.DrawSphere( this.actuator.Movement.Target.position, 2.0f);
-            }*/
-        }
-    }
+//    public void OnDrawGizmos()
+//    {
+//        if (this.draw)
+//        {
+//            //draw the current Solution Path if any (for debug purposes)
+//            if (this.decomposer.getCurrentSolution() != null)
+//            {
+//                var previousPosition = this.startPosition;
+//                foreach (var pathPosition in this.actuator.currentSolution.PathPositions)
+//                {
+//                    Debug.DrawLine(previousPosition, pathPosition, Color.red);
+//                    previousPosition = pathPosition;
+//                }
+//
+//               previousPosition = this.startPosition;
+//                foreach (var pathPosition in this.actuator.currentSmoothedSolution.PathPositions)
+//                {
+//                    Debug.DrawLine(previousPosition, pathPosition, Color.green);
+//                    previousPosition = pathPosition;
+//                }
+//            }
+//
+//            //draw the nodes in Open and Closed Sets
+//            if (this.decomposer.aStarPathFinding != null)
+//            {
+//                Gizmos.color = Color.cyan;
+//
+//                if (this.decomposer.aStarPathFinding.Open != null)
+//                {
+//                    foreach (var nodeRecord in this.decomposer.aStarPathFinding.Open.All())
+//                    {
+//                        Gizmos.DrawSphere(nodeRecord.node.LocalPosition, 1.0f);
+//                    }
+//                }
+//
+//                Gizmos.color = Color.blue;
+//
+//                if (this.decomposer.aStarPathFinding.Closed != null)
+//                {
+//                    foreach (var nodeRecord in this.decomposer.aStarPathFinding.Closed.All())
+//                    {
+//                        Gizmos.DrawSphere(nodeRecord.node.LocalPosition, 1.0f);
+//                    }
+//                }
+//            }
+//
+//            /*Gizmos.color = Color.yellow;
+//            //draw the target for the follow path movement
+//            if (this.character.Movement != null)
+//            {
+//                Gizmos.DrawSphere( this.actuator.Movement.Target.position, 2.0f);
+//            }*/
+//        }
+//    }
 
     private bool MouseClickPosition(out Vector3 position)
     {
@@ -267,74 +229,7 @@ public class PathfindingManager : MonoBehaviour
 		//if not the point is not valid
         return false;
     }
-
-    private void InitializeMainPedestrian(GameObject[] obstacles)
-    {
-        this.Blended = new BlendedMovement
-        {
-            Character = this.firstPedestrian.KinematicData
-        };
-
-        foreach (var obstacle in obstacles)
-        {
-
-            var avoidObstacleMovement = new DynamicAvoidObstacle(obstacle)
-            {
-                MaxAcceleration = MAX_ACCELERATION,
-                AvoidMargin = AVOID_MARGIN,
-                MaxLookAhead = MAX_LOOK_AHEAD,
-                Character = this.firstPedestrian.KinematicData,
-            };
-            this.Blended.Movements.Add(new MovementWithWeight(avoidObstacleMovement, this.gang.Count + 50.0f));
-        }
-
-        var wander = new DynamicWander
-        {
-            TurnAngle = MathConstants.MATH_1_PI,
-            WanderOffset = 15.0f,
-            WanderRadius = 5.0f,
-            MaxAcceleration = MAX_ACCELERATION,
-            Character = this.firstPedestrian.KinematicData
-        };
-
-        this.Blended.Movements.Add(new MovementWithWeight(wander, obstacles.Length));
-        this.firstPedestrian.Movement = Blended;
-
-    }
-
-    private void InitializeSecondaryPedestrians(DynamicCharacter character, GameObject[] obstacles)
-	{
-		this.Blended = new BlendedMovement
-		{
-			Character = character.KinematicData
-		};
 		
-		foreach (var obstacle in obstacles)
-		{
-			
-			var avoidObstacleMovement = new DynamicAvoidObstacle(obstacle)
-			{
-				MaxAcceleration = MAX_ACCELERATION,
-				AvoidMargin = AVOID_MARGIN,
-				MaxLookAhead = MAX_LOOK_AHEAD,
-				Character = character.KinematicData,
-			};
-			this.Blended.Movements.Add(new MovementWithWeight(avoidObstacleMovement, this.gang.Count + 50.0f));
-		}
-		
-		var wander = new DynamicWander
-		{
-			TurnAngle = MathConstants.MATH_1_PI,
-			WanderOffset = 15.0f,
-			WanderRadius = 5.0f,
-			MaxAcceleration = MAX_ACCELERATION,
-			Character = character.KinematicData
-		};
-
-		this.Blended.Movements.Add (new MovementWithWeight(wander, obstacles.Length));
-		character.Movement = Blended;
-	}
-
     //Movement used in deadLock situations
     private void InitializeDeadLock(DynamicCharacter character, GameObject[] obstacles)
     {
@@ -342,19 +237,7 @@ public class PathfindingManager : MonoBehaviour
         {
             Character = character.KinematicData
         };
-
-        foreach (var obstacle in obstacles)
-        {
-
-            var avoidObstacleMovement = new DynamicAvoidObstacle(obstacle)
-            {
-                MaxAcceleration = 40.0f,
-                AvoidMargin = AVOID_MARGIN,
-                MaxLookAhead = MAX_LOOK_AHEAD,
-                Character = character.KinematicData,
-            };
-            this.BlendedDeadLock.Movements.Add(new MovementWithWeight(avoidObstacleMovement, this.gang.Count + 500.0f));
-        }
+				
 
         var wander = new DynamicWander
         {
@@ -367,35 +250,6 @@ public class PathfindingManager : MonoBehaviour
 
         this.BlendedDeadLock.Movements.Add(new MovementWithWeight(wander, obstacles.Length));
     }
-
-    //Clone Pedestrians
-    private List<DynamicCharacter> CloneSecondaryPedestrians(GameObject objectToClone, int numberOfCharacters, GameObject[] obstacles)
-	{
-		var characters = new List<DynamicCharacter>();
-		for (int i = 0; i < numberOfCharacters; i++)
-        {
-            var clone = GameObject.Instantiate(objectToClone);
-            clone.transform.position = new Vector3(Random.Range(-100, 100), 0, Random.Range(-100, 100));
-            var character = new DynamicCharacter(clone)
-            {
-                MaxSpeed = MAX_SPEED,
-                Drag = DRAG
-            };
-            character.KinematicData.orientation = (float)Mathf.PI * i;
-            character.KinematicData.velocity = character.KinematicData.position * Random.Range(0, MAX_SPEED);
-            characters.Add(character);
-
-            var avoidObstacle = new AvoidObstacleConstraint
-            {
-                Center = pedestrian.gameObject.transform.position,
-                Radius = PEDESTRIAN_RADIUS,
-                Margin = PEDESTRIAN_RADIUS * 2.0f,
-                Character = this.character.KinematicData
-            };
-            this.steeringPipe.Constraints.Add(avoidObstacle);
-        }
-        return characters;
-	}
 
     private Vector3 auxVector;
     private void UpdateMovingGameObject(DynamicCharacter movingCharacter, int index)
