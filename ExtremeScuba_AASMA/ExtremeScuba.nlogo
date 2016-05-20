@@ -78,6 +78,12 @@ to setup
 end
 
 to go
+  tick
+  ask bubbles [bubbles-loop]
+  ask gambozinos [gambozinos-loop]
+  ask urchins [urchins-loop]
+  ask divers [divers-loop]
+
 end
 
 ;;INICIALIZATION OF TURTLES
@@ -211,7 +217,7 @@ end
 to communicate
 end
 
-to attack
+to attack []
   if harpon-hit?
   [
 
@@ -236,9 +242,16 @@ end
 to attack-diver
 end
 
+;; LOOPS
 
-
-
+to divers-loop
+end
+to bubbles-loop
+end
+to gambozinos-loop
+end
+to urchins-loop
+end
 
 @#$#@#$#@
 GRAPHICS-WINDOW
