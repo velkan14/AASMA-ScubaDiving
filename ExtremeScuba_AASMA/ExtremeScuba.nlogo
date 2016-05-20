@@ -83,7 +83,7 @@ to go
   ask gambozinos [gambozinos-loop]
   ask urchins [urchins-loop]
   ask divers [divers-loop]
-
+  create-random
 end
 
 ;;INICIALIZATION OF TURTLES
@@ -136,7 +136,7 @@ to init-divers [ num ]
 
     set color red
     setxy random-pxcor random-pycor
-    set label (word "HP:" health " ; O2:" oxygen)
+    set label (word "HP:" health "; O2:" oxygen "; Caught:" gambozinos-caught)
 
     set visible-bubbles (turtles)
     set visible-gambozinos (turtles)
@@ -166,7 +166,7 @@ to update-visible-urchins
 end
 
 to update-visible-gambozinos
-  set visible-gambozinos (urchins in-cone max-distance max-angle)
+  set visible-gambozinos (gambozinos in-cone max-distance max-angle)
 end
 
 ;;DIVER SENSORES
@@ -200,7 +200,7 @@ end
 
 to-report harpon-hit?
   let r random 1
-  if  r <= probability-of-hit [report true]
+  if  r < probability-of-hit [report true]
   report false
 end
 
@@ -217,17 +217,23 @@ end
 to communicate
 end
 
-to attack []
+to attack [animal]
   if harpon-hit?
   [
-
+    ask animal [die]
+    caught-animal
   ]
 end
 
 to take-bubble
+  let bubble one-of visible-bubbles
+  set oxygen 100
+  ask bubble [die]
 end
 
 to caught-animal
+  set gambozinos-caught gambozinos-caught + 1
+  set gambozinos-in-the-backpack gambozinos-in-the-backpack + 1
 end
 
 to die-in-Water
@@ -266,6 +272,16 @@ to divers-loop
   update-visible-bubbles
   update-visible-gambozinos
   update-visible-urchins
+
+  if can-attack?
+  [
+   ifelse close-to-urchin?  [attack one-of visible-urchins]
+         [if close-to-gambozino?[attack one-of visible-gambozinos]]
+  ]
+  set oxygen oxygen - oxygen-decay
+  if close-to-bubble? [take-bubble]
+  if oxygen = 0 [die]
+  set label (word "HP:" health "; O2:" oxygen "; Caught:" gambozinos-caught)
 end
 to bubbles-loop
 end
@@ -276,6 +292,15 @@ end
 to urchins-loop
   rotate
   if can-move? urchins-speed [fd urchins-speed]
+end
+
+to create-random
+  let r random 100
+  if r < probability-of-new-urchin [init-urchins 1]
+  set r random 100
+  if r < probability-of-new-bubble [init-bubbles 1]
+  set r random 100
+  if r < probability-of-new-gambozino [init-gambozinos 1]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -446,7 +471,7 @@ probability-of-hit
 probability-of-hit
 0
 1
-0.8
+0.1
 0.1
 1
 NIL
@@ -488,6 +513,88 @@ max-harpoon-distance
 1
 0
 Number
+
+MONITOR
+11
+349
+99
+394
+Gambozinos
+count gambozinos
+17
+1
+11
+
+MONITOR
+11
+394
+98
+439
+NIL
+count urchins
+17
+1
+11
+
+SLIDER
+10
+316
+182
+349
+oxygen-decay
+oxygen-decay
+0
+100
+1
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+12
+481
+201
+514
+probability-of-new-gambozino
+probability-of-new-gambozino
+0
+100
+50
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+12
+445
+201
+478
+probability-of-new-bubble
+probability-of-new-bubble
+0
+100
+50
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+12
+517
+201
+550
+probability-of-new-urchin
+probability-of-new-urchin
+0
+100
+50
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
