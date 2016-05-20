@@ -191,8 +191,8 @@ end
 to-report can-attack?
   if close-to-gambozino? or close-to-urchin?
   [
-    let urchins-near (urchins in-cone max-harpoon-distance max-angle)
-    let gambozinos-near (gambozinos in-cone max-harpoon-distance max-angle)
+    let urchins-near (urchins in-cone harpon-distance max-angle)
+    let gambozinos-near (gambozinos in-cone harpon-distance max-angle)
     if any? urchins-near or any? gambozinos-near [report true]
   ]
   report false
@@ -239,13 +239,20 @@ end
 to die-in-Water
 end
 
+to lose-health [n]
+  set health health - n
+end
+
 ;;URCHINS SENSORES
 
 to-report touching-diver?
+  report any? (divers in-cone 2 360)
 end
 
 ;;URCHINS ACTUATORS
 to attack-diver
+  let diver one-of (divers in-cone 2 360)
+  ask diver [set health health - 5]
 end
 
 to rotate
@@ -280,7 +287,8 @@ to divers-loop
   ]
   set oxygen oxygen - oxygen-decay
   if close-to-bubble? [take-bubble]
-  if oxygen = 0 [die]
+  if oxygen <= 0 [die]
+  if health <= 0 [die]
   set label (word "HP:" health "; O2:" oxygen "; Caught:" gambozinos-caught)
 end
 to bubbles-loop
@@ -292,6 +300,7 @@ end
 to urchins-loop
   rotate
   if can-move? urchins-speed [fd urchins-speed]
+  if touching-diver? [attack-diver]
 end
 
 to create-random
@@ -392,7 +401,7 @@ INPUTBOX
 684
 79
 num-urchins
-20
+100
 1
 0
 Number
@@ -452,12 +461,12 @@ architecture
 0
 
 INPUTBOX
-844
-20
-962
-80
+87
+216
+178
+276
 harpon-distance
-5
+2
 1
 0
 Number
@@ -503,17 +512,6 @@ max-angle
 º
 HORIZONTAL
 
-INPUTBOX
-87
-216
-203
-276
-max-harpoon-distance
-2
-1
-0
-Number
-
 MONITOR
 11
 349
@@ -545,7 +543,7 @@ oxygen-decay
 oxygen-decay
 0
 100
-1
+0
 1
 1
 NIL
@@ -560,7 +558,7 @@ probability-of-new-gambozino
 probability-of-new-gambozino
 0
 100
-50
+14
 1
 1
 NIL
@@ -575,7 +573,7 @@ probability-of-new-bubble
 probability-of-new-bubble
 0
 100
-50
+40
 1
 1
 NIL
@@ -590,7 +588,7 @@ probability-of-new-urchin
 probability-of-new-urchin
 0
 100
-50
+100
 1
 1
 NIL
