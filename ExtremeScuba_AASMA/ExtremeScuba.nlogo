@@ -149,15 +149,20 @@ end
 ;;DIVER SENSORES
 
 to-report close-to-diver?
+  let myID who
+  report any? (divers in-cone max-distance max-angle) with [who != myID]
 end
 
 to-report close-to-gambozino?
+  report any? (gambozinos in-cone max-distance max-angle)
 end
 
 to-report close-to-urchin?
+  report any? (urchins in-cone max-distance max-angle)
 end
 
 to-report close-to-bubble?
+  report any? (bubbles in-cone max-distance max-angle)
 end
 
 to-report can-attack?
@@ -197,7 +202,6 @@ end
 ;;URCHINS ACTUATORS
 to attack-diver
 end
-
 
 
 
@@ -376,6 +380,32 @@ probability-of-hit
 0.1
 1
 NIL
+HORIZONTAL
+
+INPUTBOX
+10
+216
+165
+276
+max-distance
+2
+1
+0
+Number
+
+SLIDER
+10
+282
+182
+315
+max-angle
+max-angle
+0
+360
+180
+1
+1
+º
 HORIZONTAL
 
 @#$#@#$#@
