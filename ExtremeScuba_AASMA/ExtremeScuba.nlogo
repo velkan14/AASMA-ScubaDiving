@@ -146,35 +146,64 @@ to init-divers [ num ]
   ]
 end
 
+to update-visible-divers
+  let myID who
+  set visible-divers (divers in-cone max-distance max-angle) with [who != myID]
+end
+
+to update-visible-bubbles
+  set visible-bubbles (bubbles in-cone max-distance max-angle)
+end
+
+to update-visible-urchins
+  set visible-urchins (urchins in-cone max-distance max-angle)
+end
+
+to update-visible-gambozinos
+  set visible-gambozinos (urchins in-cone max-distance max-angle)
+end
+
 ;;DIVER SENSORES
 
+
 to-report close-to-diver?
-  let myID who
-  report any? (divers in-cone max-distance max-angle) with [who != myID]
+  report any? visible-divers
 end
 
 to-report close-to-gambozino?
-  report any? (gambozinos in-cone max-distance max-angle)
+  report any? visible-gambozinos
 end
 
 to-report close-to-urchin?
-  report any? (urchins in-cone max-distance max-angle)
+  report any? visible-urchins
 end
 
 to-report close-to-bubble?
-  report any? (bubbles in-cone max-distance max-angle)
+  report any? visible-bubbles
 end
 
 to-report can-attack?
+  if close-to-gambozino? or close-to-urchin?
+  [
+    let urchins-near (urchins in-cone max-harpoon-distance max-angle)
+    let gambozinos-near (gambozinos in-cone max-harpoon-distance max-angle)
+    if any? urchins-near or any? gambozinos-near [report true]
+  ]
+  report false
 end
 
 to-report harpon-hit?
+  let r random 1
+  if  r <= probability-of-hit [report true]
+  report false
 end
 
 to-report is-oxygen-zero?
+  report oxygen = 0
 end
 
 to-report is-health-zero?
+  report health = 0
 end
 
 ;;DIVER ACTUATORS
@@ -183,6 +212,10 @@ to communicate
 end
 
 to attack
+  if harpon-hit?
+  [
+
+  ]
 end
 
 to take-bubble
@@ -385,10 +418,10 @@ HORIZONTAL
 INPUTBOX
 10
 216
-165
+87
 276
 max-distance
-2
+3
 1
 0
 Number
@@ -407,6 +440,17 @@ max-angle
 1
 º
 HORIZONTAL
+
+INPUTBOX
+87
+216
+203
+276
+max-harpoon-distance
+2
+1
+0
+Number
 
 @#$#@#$#@
 ## WHAT IS IT?
