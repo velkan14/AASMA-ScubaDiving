@@ -242,17 +242,41 @@ end
 to attack-diver
 end
 
+to rotate
+  let head (heading)
+  let r random-float 1
+  let rand (random 2)
+  ifelse(rand = 0)
+  [set heading head + 180 * r]
+  [set heading head - 180 * r]
+
+
+end
+
+to move-ahead
+  let ahead (patch-ahead 1)
+end
+
 ;; LOOPS
 
 to divers-loop
+  rotate
+  if can-move? gambozinos-speed [fd gambozinos-speed]
+  update-visible-divers
+  update-visible-bubbles
+  update-visible-gambozinos
+  update-visible-urchins
 end
 to bubbles-loop
 end
 to gambozinos-loop
+  rotate
+  if can-move? gambozinos-speed [fd gambozinos-speed]
 end
 to urchins-loop
+  rotate
+  if can-move? urchins-speed [fd urchins-speed]
 end
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 342
@@ -434,7 +458,7 @@ INPUTBOX
 87
 276
 max-distance
-3
+4
 1
 0
 Number
