@@ -64,9 +64,9 @@ to setup
   set interation-actions (list)
   set simulation-actions (list)
 
-  set-default-shape bubbles "circle 2"
+  set-default-shape bubbles "circle 3"
   set-default-shape gambozinos "fish"
-  set-default-shape urchins "turtle"
+  set-default-shape urchins "urchin"
   set-default-shape divers "person"
 
   init-bubbles num-bubbles
@@ -77,14 +77,16 @@ to setup
   reset-ticks
 end
 
+;; --------------------------- GO -------------------------------------
 to go
   tick
   ask bubbles [bubbles-loop]
   ask gambozinos [gambozinos-loop]
   ask urchins [urchins-loop]
-  ask divers [divers-loop]
+  if architecture = "reactive" [ask divers [divers-reactive-loop]]
   create-random
 end
+;; ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| GO
 
 ;;INICIALIZATION OF TURTLES
 
@@ -111,7 +113,7 @@ to init-urchins [ num ]
     set hit-by (list)
     set attacked-by (list)
     set max-speed urchins-speed
-    set color green
+    set color magenta + 1
     setxy random-pxcor random-pycor
   ]
 end
@@ -188,13 +190,8 @@ to-report close-to-bubble?
   report any? visible-bubbles
 end
 
-to-report can-attack?
-  if close-to-gambozino? or close-to-urchin?
-  [
-    let urchins-near (urchins in-cone harpon-distance max-angle)
-    let gambozinos-near (gambozinos in-cone harpon-distance max-angle)
-    if any? urchins-near or any? gambozinos-near [report true]
-  ]
+to-report can-attack? [a]
+  if distance a < harpon-distance [report true]
   report false
 end
 
@@ -205,11 +202,11 @@ to-report harpon-hit?
 end
 
 to-report is-oxygen-zero?
-  report oxygen = 0
+  report oxygen <= 0
 end
 
 to-report is-health-zero?
-  report health = 0
+  report health <= 0
 end
 
 ;;DIVER ACTUATORS
@@ -218,11 +215,14 @@ to communicate
 end
 
 to attack [animal]
-  if harpon-hit?
-  [
-    ask animal [die]
-    caught-animal
+  if animal != nobody[
+    if harpon-hit?
+    [
+      ask animal [die]
+      caught-animal
+    ]
   ]
+
 end
 
 to take-bubble
@@ -234,9 +234,6 @@ end
 to caught-animal
   set gambozinos-caught gambozinos-caught + 1
   set gambozinos-in-the-backpack gambozinos-in-the-backpack + 1
-end
-
-to die-in-Water
 end
 
 to lose-health [n]
@@ -266,40 +263,47 @@ to rotate
 
 end
 
-to move-ahead
-  let ahead (patch-ahead 1)
+to move
+  jump max-speed
 end
 
 ;; LOOPS
 
-to divers-loop
-  rotate
-  if can-move? gambozinos-speed [fd gambozinos-speed]
+to divers-reactive-loop
+  set oxygen oxygen - oxygen-decay
+  set label (word "HP:" health "; O2:" oxygen "; Caught:" gambozinos-caught)
+
+  if is-oxygen-zero? [die]
+  if is-health-zero? [die]
+
   update-visible-divers
   update-visible-bubbles
   update-visible-gambozinos
   update-visible-urchins
 
-  if can-attack?
+  ifelse close-to-bubble? [take-bubble]
   [
-   ifelse close-to-urchin?  [attack one-of visible-urchins]
-         [if close-to-gambozino?[attack one-of visible-gambozinos]]
-  ]
-  set oxygen oxygen - oxygen-decay
-  if close-to-bubble? [take-bubble]
-  if oxygen <= 0 [die]
-  if health <= 0 [die]
-  set label (word "HP:" health "; O2:" oxygen "; Caught:" gambozinos-caught)
+    ifelse close-to-urchin? [attack one-of visible-urchins with [can-attack? myself]]
+    [
+      ifelse close-to-gambozino? [attack one-of visible-gambozinos with [can-attack? myself]]
+      [
+        ifelse can-move? max-speed [move]
+        [
+          rotate
+   ]]]]
 end
+
 to bubbles-loop
 end
+
 to gambozinos-loop
   rotate
-  if can-move? gambozinos-speed [fd gambozinos-speed]
+  if can-move? max-speed [move]
 end
+
 to urchins-loop
   rotate
-  if can-move? urchins-speed [fd urchins-speed]
+  if can-move? max-speed [move]
   if touching-diver? [attack-diver]
 end
 
@@ -401,7 +405,7 @@ INPUTBOX
 684
 79
 num-urchins
-100
+20
 1
 0
 Number
@@ -445,7 +449,7 @@ INPUTBOX
 115
 165
 divers-speed
-0.5
+2
 1
 0
 Number
@@ -466,7 +470,7 @@ INPUTBOX
 178
 276
 harpon-distance
-2
+3
 1
 0
 Number
@@ -480,7 +484,7 @@ probability-of-hit
 probability-of-hit
 0
 1
-0.1
+0.5
 0.1
 1
 NIL
@@ -543,7 +547,7 @@ oxygen-decay
 oxygen-decay
 0
 100
-0
+1
 1
 1
 NIL
@@ -558,7 +562,7 @@ probability-of-new-gambozino
 probability-of-new-gambozino
 0
 100
-14
+40
 1
 1
 NIL
@@ -588,7 +592,7 @@ probability-of-new-urchin
 probability-of-new-urchin
 0
 100
-100
+40
 1
 1
 NIL
@@ -697,6 +701,12 @@ false
 0
 Circle -7500403 true true 0 0 300
 Circle -16777216 true false 30 30 240
+
+circle 3
+false
+0
+Circle -7500403 true true 0 0 300
+Circle -1 true false 30 30 240
 
 cow
 false
@@ -909,6 +919,12 @@ Polygon -10899396 true false 105 90 75 75 55 75 40 89 31 108 39 124 60 105 75 10
 Polygon -10899396 true false 132 85 134 64 107 51 108 17 150 2 192 18 192 52 169 65 172 87
 Polygon -10899396 true false 85 204 60 233 54 254 72 266 85 252 107 210
 Polygon -7500403 true true 119 75 179 75 209 101 224 135 220 225 175 261 128 261 81 224 74 135 88 99
+
+urchin
+false
+0
+Circle -7500403 true true 90 90 120
+Polygon -7500403 true true 105 180 15 150 105 135 45 60 120 120 105 15 165 120 210 15 195 165 285 105 120 135 300 210 135 165 150 300 180 180 60 255 105 150
 
 wheel
 false
