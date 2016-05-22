@@ -52,6 +52,12 @@ divers-own [
   known-gambozinos
   known-urchins
   known-divers
+
+  ;;Things for BDI
+  last-action
+  plan
+  intention
+  desire
 ]
 
 to setup
@@ -83,7 +89,8 @@ to go
   ask bubbles [bubbles-loop]
   ask gambozinos [gambozinos-loop]
   ask urchins [urchins-loop]
-  if architecture = "reactive" [ask divers [divers-reactive-loop]]
+  ask divers [divers-loop]
+
   create-random
 end
 ;; ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| GO
@@ -151,6 +158,9 @@ to init-divers [ num ]
     set known-divers (turtles)
 
     set agent-architecture architecture
+
+    set last-action ""
+    set plan build-empty-plan
   ]
 end
 
@@ -207,6 +217,14 @@ end
 
 to-report is-health-zero?
   report health <= 0
+end
+
+to-report is-low-oxygen?
+  report oxygen < 40
+end
+
+to-report is-low-health?
+  report health < 40
 end
 
 ;;DIVER ACTUATORS
@@ -269,8 +287,8 @@ end
 
 ;; LOOPS
 
-to divers-reactive-loop
-  set oxygen oxygen - oxygen-decay
+to divers-loop
+    set oxygen oxygen - oxygen-decay
   set label (word "HP:" health "; O2:" oxygen "; Caught:" gambozinos-caught)
 
   if is-oxygen-zero? [die]
@@ -281,6 +299,11 @@ to divers-reactive-loop
   update-visible-gambozinos
   update-visible-urchins
 
+  ifelse architecture = "reactive" [divers-reactive-loop]
+  [if architecture = "deliberative BDI"[divers-deliberative-BDI-loop]]
+end
+
+to divers-reactive-loop
   ifelse close-to-bubble? [take-bubble]
   [
     ifelse close-to-urchin? [attack one-of visible-urchins with [can-attack? myself]]
@@ -292,6 +315,73 @@ to divers-reactive-loop
           rotate
    ]]]]
 end
+
+
+to divers-deliberative-BDI-loop
+  ;;if goal-succeeded?
+    ;;[stop]
+
+  set last-action ""
+  ifelse not (empty-plan? plan or intention-succeeded? intention or impossible-intention? intention)
+  [
+    execute-plan-action
+    update-beliefs
+  ]
+  [
+    update-beliefs
+    ;; Check the robot's options
+    set desire BDI-options
+    set intention BDI-filter
+    set plan build-plan-for-intention intention
+
+    ;; If it could not build a plan, the robot should behave as a reactive agent
+    if(empty-plan? plan)
+      [ divers-reactive-loop ]
+  ]
+end
+
+;;;
+;;;  Execute the next action of the current plan
+;;;
+to execute-plan-action
+  let currentInstruction 0
+
+  set currentInstruction get-plan-first-instruction plan
+
+  ifelse(instruction-caught-oxygen? currentInstruction)
+  [
+    if close-to-bubble? [take-bubble]
+    set plan remove-plan-first-instruction plan
+  ]
+  [ ifelse(instruction-caught-gambozinos? currentInstruction)
+    [
+      if close-to-gambozino? [attack one-of visible-gambozinos with [can-attack? myself]]
+      set plan remove-plan-first-instruction plan
+    ]
+    [ ifelse(instruction-attack-urchins? currentInstruction)
+      [
+        if close-to-urchin? [attack one-of visible-urchins with [can-attack? myself]]
+      ]
+      [ if(instruction-find-heading? currentInstruction)
+        [
+          ifelse(heading = get-instruction-value currentInstruction)
+          [ set plan remove-plan-first-instruction plan ]
+          [ set heading get-instruction-value currentInstruction]
+        ]
+      ]
+    ]
+  ]
+end
+
+;;;
+;;;  Check if the goal has been achieved ( all boxes on shelves and robot on their initial positions)
+;;;
+to-report goal-succeeded?
+  report false ;;( equal-positions? current-position build-position 0 0
+          ;;and (heading = 90)
+          ;;and (boxes-on-shelves = NUM_BOXES) )
+end
+
 
 to bubbles-loop
 end
@@ -314,6 +404,256 @@ to create-random
   if r < probability-of-new-bubble [init-bubbles 1]
   set r random 100
   if r < probability-of-new-gambozino [init-gambozinos 1]
+end
+
+;;;
+;;; -------------------------
+;;;    Plans
+;;; -------------------------
+;;;
+to-report build-empty-plan
+  report []
+end
+
+to-report add-instruction-to-plan [pplan iinstruction]
+  report lput iinstruction pplan
+end
+
+to-report remove-plan-first-instruction [pplan]
+  report butfirst pplan
+end
+
+to-report get-plan-first-instruction [pplan]
+  report first pplan
+end
+
+to-report empty-plan? [pplan]
+  report empty? pplan
+end
+
+;;;
+;;; -------------------------
+;;; Intention
+;;;
+;;; Chap.4 of [Wooldridge02]
+;;; An intention is a list such as [desire position heading]
+;;; -------------------------
+;;;
+to-report build-empty-intention
+  report []
+end
+
+to-report build-intention [ddesire aagent]
+  let aux 0
+
+  set aux list ddesire aagent
+  report aux
+end
+
+to-report get-intention-desire [iintention]
+  report item 0 iintention
+end
+
+to-report get-intention-agent [iintention]
+  report item 1 iintention
+end
+
+to-report empty-intention? [iintention]
+  report empty? iintention
+end
+
+;;;
+;;;  Check if the robot's intention has been achieved
+;;;
+to-report intention-succeeded? [iintention]
+  let ddesire 0
+
+
+  if(empty-intention? iintention)
+    [ report false ]
+
+  set ddesire get-intention-desire iintention
+  ifelse(ddesire = "caught-oxygen")[ report oxygen = 100 ]
+   [ifelse(ddesire = "attack-urchins")
+    [ report get-intention-agent iintention = nobody]
+    [if(ddesire = "caught-gambozinos")
+      [ report get-intention-agent iintention = nobody]
+    ]
+  ]
+end
+
+;;;
+;;;  Check if an intention cannot be achieved anymore
+;;;  However, in this scenario, the only intention that can become impossible is "grab", which is already tested in 'execute-plan-action'
+;;;
+to-report impossible-intention? [iintention]
+  report false
+end
+
+;;;
+;;;  Update the robot's beliefs based on its perceptions
+;;;  Reference: Chap.4 of [Wooldridge02]
+;;;
+to update-beliefs
+  update-visible-divers
+  update-visible-bubbles
+  update-visible-gambozinos
+  update-visible-urchins
+end
+
+;;;
+;;; According to the current beliefs, it selects the robot's desires
+;;; Its values can be "caught-oxygen", "attack-urchins" or "caught-gambozinos"
+;;; Reference: Chap.4 de [Wooldridge02]
+;;;
+to-report BDI-options
+
+  ifelse is-low-oxygen?
+  [
+    report "caught-oxygen"
+  ]
+  [
+    ifelse is-low-health?
+    [
+      report "attack-urchins"
+    ]
+    [
+      report "caught-gambozinos"
+    ]
+  ]
+end
+
+;;;
+;;; It selects a desire and coverts it into an intention
+;;; Reference: Chap.4 de [Wooldridge02]
+;;;
+to-report BDI-filter
+  let objective 0
+  ifelse desire = "caught-oxygen"
+  [
+    set objective one-of visible-bubbles
+
+    ;;if objective = nobody [set objective min-one-of known-bubbles [distance myself]]
+    if objective = nobody [report build-empty-intention]
+
+    report build-intention desire objective
+  ]
+  [
+    ifelse desire = "attack-urchins"
+    [
+      set objective one-of visible-urchins
+      ;;if objective = nobody [set objective min-one-of known-urchins [distance myself]]
+      if objective = nobody [report build-empty-intention]
+      report build-intention desire objective
+    ]
+    [
+      if desire = "caught-gambozinos"
+      [
+        set objective one-of visible-gambozinos
+        ;;if objective = nobody [set objective min-one-of known-gambozinos [distance myself]]
+        if objective = nobody [report build-empty-intention]
+
+        report build-intention desire objective
+      ]
+    ]
+  ]
+  report build-empty-intention
+end
+
+
+;;;
+;;;  Create a plan for a given intention
+;;;
+to-report build-plan-for-intention [iintention]
+  let new-plan 0
+
+  set new-plan build-empty-plan
+
+  if  not empty-intention? iintention
+  [
+    set new-plan build-heading-plan get-intention-agent iintention
+
+    if get-intention-desire iintention = "caught-oxygen"
+    [
+      set new-plan add-instruction-to-plan new-plan build-instruction-caught-oxygen
+    ]
+    if get-intention-desire iintention = "attack-urchins"
+    [
+      set new-plan add-instruction-to-plan new-plan build-instruction-attack-urchins
+    ]
+    if get-intention-desire iintention = "caught-gambozinos"
+    [
+      set new-plan add-instruction-to-plan new-plan build-instruction-caught-gambozinos
+    ]
+  ]
+
+  report new-plan
+end
+
+;;;
+;;; Build a pan to move the agent from posi to posf
+;;;
+to-report build-heading-plan [aagent]
+  let newPlan 0
+  let headingPlan 0
+
+
+  set newPlan build-empty-plan
+
+  set headingPlan (towards aagent)
+  set newPlan add-instruction-to-plan newPlan build-instruction-find-heading headingPlan
+
+  report newPlan
+end
+
+
+;;;
+;;; -------------------------
+;;;    Plan Intructions
+;;; -------------------------
+;;;
+to-report build-instruction [ttype vvalue]
+  report list ttype vvalue
+end
+
+to-report get-instruction-type [iinstruction]
+  report first iinstruction
+end
+
+to-report get-instruction-value [iinstruction]
+  report last iinstruction
+end
+
+to-report build-instruction-find-heading [hheading]
+  report build-instruction "h" hheading
+end
+
+to-report build-instruction-caught-oxygen []
+  report build-instruction "co" ""
+end
+
+to-report build-instruction-attack-urchins []
+  report build-instruction "au" ""
+end
+
+to-report build-instruction-caught-gambozinos []
+  report build-instruction "cg" ""
+end
+
+to-report instruction-find-heading? [iinstruction]
+  report get-instruction-type iinstruction = "h"
+end
+
+to-report instruction-caught-oxygen? [iinstruction]
+  report get-instruction-type iinstruction = "co"
+end
+
+to-report instruction-caught-gambozinos? [iinstruction]
+  report get-instruction-type iinstruction = "cg"
+end
+
+to-report instruction-attack-urchins? [iinstruction]
+  report get-instruction-type iinstruction = "au"
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -416,7 +756,7 @@ INPUTBOX
 483
 80
 num-gambozinos
-20
+0
 1
 0
 Number
@@ -462,7 +802,7 @@ CHOOSER
 architecture
 architecture
 "reactive" "deliberative BDI" "BDI w/ emotions"
-0
+1
 
 INPUTBOX
 87
@@ -510,7 +850,7 @@ max-angle
 max-angle
 0
 360
-180
+187
 1
 1
 º
@@ -547,7 +887,7 @@ oxygen-decay
 oxygen-decay
 0
 100
-1
+3
 1
 1
 NIL
@@ -562,7 +902,7 @@ probability-of-new-gambozino
 probability-of-new-gambozino
 0
 100
-40
+0
 1
 1
 NIL
@@ -577,7 +917,7 @@ probability-of-new-bubble
 probability-of-new-bubble
 0
 100
-40
+0
 1
 1
 NIL
@@ -592,11 +932,22 @@ probability-of-new-urchin
 probability-of-new-urchin
 0
 100
-40
+70
 1
 1
 NIL
 HORIZONTAL
+
+INPUTBOX
+226
+464
+335
+524
+iterations-for-pick-up
+1000
+1
+0
+Number
 
 @#$#@#$#@
 ## WHAT IS IT?
