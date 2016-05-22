@@ -17,6 +17,8 @@ turtles-own [
 
   helped-by
 
+  rest
+
   max-speed
 
   iterations
@@ -102,6 +104,7 @@ to init-bubbles [ num ]
     set color 87 ;; light cyan = 87
     setxy random-pxcor random-pycor
     set max-speed 0
+    init-heading
   ]
 end
 
@@ -112,6 +115,8 @@ to init-gambozinos [ num ]
     set max-speed gambozinos-speed
     set color yellow
     setxy random-pxcor random-pycor
+    init-heading
+    set rest 0
   ]
 end
 
@@ -122,6 +127,8 @@ to init-urchins [ num ]
     set max-speed urchins-speed
     set color magenta + 1
     setxy random-pxcor random-pycor
+    init-heading
+    set rest 0
   ]
 end
 
@@ -143,6 +150,8 @@ to init-divers [ num ]
     set helped-by (list)
     set max-speed divers-speed
 
+    init-heading
+
     set color red
     setxy random-pxcor random-pycor
     set label (word "HP:" health "; O2:" oxygen "; Caught:" gambozinos-caught)
@@ -161,7 +170,17 @@ to init-divers [ num ]
 
     set last-action ""
     set plan build-empty-plan
+    set rest 0
   ]
+end
+
+to init-heading
+  let r random 4
+  ifelse r = 0 [set heading 0]
+  [ifelse r = 1 [set heading 90]
+    [ifelse r = 2[set heading 180]
+      [ifelse r = 3[set heading 270]
+        [set heading 360]]]]
 end
 
 to update-visible-divers
@@ -227,6 +246,13 @@ to-report is-low-health?
   report health < 40
 end
 
+to-report patch-ahead-clear?
+  report true
+  let result 0
+  ask patch-ahead 1 [set result not any? turtles-here]
+  report result
+end
+
 ;;DIVER ACTUATORS
 
 to communicate
@@ -261,28 +287,30 @@ end
 ;;URCHINS SENSORES
 
 to-report touching-diver?
-  report any? (divers in-cone 2 360)
+  report any? (divers in-cone 1 360)
 end
 
 ;;URCHINS ACTUATORS
 to attack-diver
-  let diver one-of (divers in-cone 2 360)
+  let diver one-of (divers in-cone 1 360)
   ask diver [set health health - 5]
 end
 
-to rotate
-  let head (heading)
-  let r random-float 1
+to rotate-random
   let rand (random 2)
   ifelse(rand = 0)
-  [set heading head + 180 * r]
-  [set heading head - 180 * r]
-
-
+  [rt 90]
+  [rt -90]
 end
 
 to move
-  jump max-speed
+  ifelse rest = max-speed
+     [
+       fd 1
+       set rest 0
+     ][
+       set rest rest + 1
+     ]
 end
 
 ;; LOOPS
@@ -304,15 +332,15 @@ to divers-loop
 end
 
 to divers-reactive-loop
-  ifelse close-to-bubble? [take-bubble]
+  ifelse close-to-gambozino? [attack one-of visible-gambozinos with [can-attack? myself]]
   [
     ifelse close-to-urchin? [attack one-of visible-urchins with [can-attack? myself]]
     [
-      ifelse close-to-gambozino? [attack one-of visible-gambozinos with [can-attack? myself]]
+      ifelse close-to-bubble? [take-bubble]
       [
-        ifelse can-move? max-speed [move]
+        ifelse patch-ahead-clear? [move]
         [
-          rotate
+          rotate-random
    ]]]]
 end
 
@@ -333,7 +361,7 @@ to divers-deliberative-BDI-loop
     set desire BDI-options
     set intention BDI-filter
     set plan build-plan-for-intention intention
-
+    print plan
     ;; If it could not build a plan, the robot should behave as a reactive agent
     if(empty-plan? plan)
       [ divers-reactive-loop ]
@@ -350,24 +378,35 @@ to execute-plan-action
 
   ifelse(instruction-caught-oxygen? currentInstruction)
   [
+    print "instruction-caught-oxygen"
     if close-to-bubble? [take-bubble]
     set plan remove-plan-first-instruction plan
   ]
   [ ifelse(instruction-caught-gambozinos? currentInstruction)
     [
+      print "instruction-caught-gambozinos"
       if close-to-gambozino? [attack one-of visible-gambozinos with [can-attack? myself]]
       set plan remove-plan-first-instruction plan
     ]
     [ ifelse(instruction-attack-urchins? currentInstruction)
       [
+        print "instruction-attack-urchins"
         if close-to-urchin? [attack one-of visible-urchins with [can-attack? myself]]
       ]
-      [ if(instruction-find-heading? currentInstruction)
+      [ if(instruction-find-adjacent-position? currentInstruction)
+      [
+        print "ad"
+        let x 0
+        let y 0
+        ask patch-ahead 1 [set x pxcor set y pycor]
+        let p (list x y)
+        ifelse(p = get-instruction-value currentInstruction)
         [
-          ifelse(heading = get-instruction-value currentInstruction)
-          [ set plan remove-plan-first-instruction plan ]
-          [ set heading get-instruction-value currentInstruction]
-        ]
+          ifelse patch-ahead-clear? [move
+            set plan remove-plan-first-instruction plan]
+        [ rt -90 ]
+        ] [ rt 90 ]
+      ]
       ]
     ]
   ]
@@ -387,14 +426,20 @@ to bubbles-loop
 end
 
 to gambozinos-loop
-  rotate
-  if can-move? max-speed [move]
+  ifelse patch-ahead-clear? [move]
+                            [rotate-random]
+
 end
 
 to urchins-loop
-  rotate
-  if can-move? max-speed [move]
-  if touching-diver? [attack-diver]
+
+  ifelse touching-diver? [attack-diver]
+  [ifelse patch-ahead-clear? [move]
+                              [rotate-random]
+    ]
+  ask patch-here [set pcolor blue]
+
+
 end
 
 to create-random
@@ -533,7 +578,7 @@ to-report BDI-filter
   [
     set objective one-of visible-bubbles
 
-    ;;if objective = nobody [set objective min-one-of known-bubbles [distance myself]]
+    if objective = nobody [set objective min-one-of bubbles [distance myself]]
     if objective = nobody [report build-empty-intention]
 
     report build-intention desire objective
@@ -543,6 +588,7 @@ to-report BDI-filter
     [
       set objective one-of visible-urchins
       ;;if objective = nobody [set objective min-one-of known-urchins [distance myself]]
+      if objective = nobody [set objective min-one-of urchins [distance myself]]
       if objective = nobody [report build-empty-intention]
       report build-intention desire objective
     ]
@@ -551,6 +597,7 @@ to-report BDI-filter
       [
         set objective one-of visible-gambozinos
         ;;if objective = nobody [set objective min-one-of known-gambozinos [distance myself]]
+        if objective = nobody [set objective min-one-of gambozinos [distance myself]]
         if objective = nobody [report build-empty-intention]
 
         report build-intention desire objective
@@ -560,6 +607,13 @@ to-report BDI-filter
   report build-empty-intention
 end
 
+to-report get-adj-cors [a]
+  let x 0
+  let y 0
+  ask a [set x xcor set y ycor]
+  report (list x y)
+  ;;report (list (x + 1) (y + 1))
+end
 
 ;;;
 ;;;  Create a plan for a given intention
@@ -571,7 +625,8 @@ to-report build-plan-for-intention [iintention]
 
   if  not empty-intention? iintention
   [
-    set new-plan build-heading-plan get-intention-agent iintention
+    let aagent get-intention-agent iintention
+    set new-plan build-path-plan (list xcor ycor) get-adj-cors aagent
 
     if get-intention-desire iintention = "caught-oxygen"
     [
@@ -602,6 +657,19 @@ to-report build-heading-plan [aagent]
 
   set headingPlan (towards aagent)
   set newPlan add-instruction-to-plan newPlan build-instruction-find-heading headingPlan
+
+  report newPlan
+end
+
+to-report build-path-plan [posi posf]
+  let newPlan 0
+  let path 0
+
+
+  set newPlan build-empty-plan
+  set path (find-path posi posf)
+  foreach path
+    [ set newPlan add-instruction-to-plan newPlan build-instruction-find-adjacent-position ? ]
 
   report newPlan
 end
@@ -640,8 +708,8 @@ to-report build-instruction-caught-gambozinos []
   report build-instruction "cg" ""
 end
 
-to-report instruction-find-heading? [iinstruction]
-  report get-instruction-type iinstruction = "h"
+to-report instruction-find-adjacent-position? [iinstruction]
+  report get-instruction-type iinstruction = "ad"
 end
 
 to-report instruction-caught-oxygen? [iinstruction]
@@ -654,6 +722,129 @@ end
 
 to-report instruction-attack-urchins? [iinstruction]
   report get-instruction-type iinstruction = "au"
+end
+
+to-report build-instruction-find-adjacent-position [aadjacent-position]
+  report build-instruction "ad" aadjacent-position
+end
+
+;;;
+;;;  Return a list of positions from initialPos to FinalPos
+;;;  The returning list excludes the initialPos
+;;;  If no path is found, the returning list is empty
+;;;
+to-report find-path [intialPos FinalPos]
+  let opened 0
+  let closed 0
+  let aux 0
+  let aux2 0
+  let aux3 0
+  let to-explore 0
+
+  set to-explore []
+  set closed []
+  set opened []
+  set opened fput (list (list 0 0 intialPos) []) opened
+
+  while [not empty? opened]
+  [
+    set to-explore first opened
+    set opened remove to-explore opened
+    set closed fput to-explore closed
+
+    ifelse last first to-explore = FinalPos
+    [ report find-solution to-explore closed ]
+    [ set aux adjacents to-explore FinalPos
+      foreach aux
+      [
+        set aux2 ?
+        set aux3 filter [ last first aux2 = last first ? and first first aux2 < first first ? ] opened
+        ifelse not empty? aux3
+        [ set opened remove first aux3 opened
+          set opened fput aux2 opened ]
+        [
+          set aux3 filter [ last first aux2 = last first ? ] closed
+          ifelse not empty? aux3
+          [
+            if first first first aux3 > first first aux2
+              [ set closed remove first aux3 closed
+                set opened fput aux2 opened ]
+          ]
+          [ set opened fput aux2 opened ]
+        ]
+      ]
+
+      ;; orders the opened list according to the heuristic
+      set opened sort-by [ first first ?1 < first first ?2 ] opened
+    ]
+  ]
+  report []
+end
+
+to-report find-solution [node closed]
+  let solution 0
+  let parent 0
+
+  set solution (list last first node)
+  set parent item 1 node
+  while [not empty? parent] [
+    set parent first filter [ parent = first ? ] closed
+    set solution fput last first parent solution
+    set parent last parent
+  ]
+
+  report butfirst solution
+end
+
+to-report adjacents [node mobjectivo]
+  let aux 0
+  let aux2 0
+
+  set aux2 []
+  set aux adjacent-positions-of-type (last first node)
+  foreach aux [ set aux2 fput (list 0
+                                  ((item 1 first node) + 1)
+                                   ?)
+                             aux2 ]
+  set aux []
+  foreach aux2
+  [ set aux fput (list (replace-item 0 ? (heuristic ? mobjectivo))
+                       first node)
+                 aux ]
+  report aux
+end
+
+to-report adjacent-positions-of-type [pos]
+  let solution 0
+  let x 0
+  let y 0
+
+  set x item 0 pos
+  set y item 1 pos
+
+  set solution []
+  set solution fput (list x (y - 1)) solution
+  set solution fput (list x (y + 1)) solution
+  set solution fput (list (x - 1) y) solution
+  set solution fput (list (x + 1) y) solution
+  report solution
+end
+
+
+;;;
+;;;  Add the distance to the goal position and the current node cost
+;;;
+to-report heuristic [node mgoal]
+  let cost 0
+  let x 0
+  let y 0
+
+  set cost item 1 node
+  set x first item 2 node
+  set y first butfirst item 2 node
+
+  report cost +
+         2 * (abs(x - item 0 mgoal) +  abs(y - item 1 mgoal))
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -677,8 +868,8 @@ GRAPHICS-WINDOW
 34
 -18
 18
-0
-0
+1
+1
 1
 ticks
 30.0
@@ -723,7 +914,7 @@ INPUTBOX
 581
 79
 num-bubbles
-10
+15
 1
 0
 Number
@@ -734,7 +925,7 @@ INPUTBOX
 798
 79
 num-divers
-5
+1
 1
 0
 Number
@@ -745,7 +936,7 @@ INPUTBOX
 684
 79
 num-urchins
-20
+10
 1
 0
 Number
@@ -756,7 +947,7 @@ INPUTBOX
 483
 80
 num-gambozinos
-0
+15
 1
 0
 Number
@@ -767,7 +958,7 @@ INPUTBOX
 237
 166
 gambozinos-speed
-0.5
+4
 1
 0
 Number
@@ -778,7 +969,7 @@ INPUTBOX
 338
 166
 urchins-speed
-0.5
+4
 1
 0
 Number
@@ -789,7 +980,7 @@ INPUTBOX
 115
 165
 divers-speed
-2
+0
 1
 0
 Number
@@ -805,12 +996,12 @@ architecture
 1
 
 INPUTBOX
-87
+90
 216
-178
+181
 276
 harpon-distance
-3
+2
 1
 0
 Number
@@ -824,7 +1015,7 @@ probability-of-hit
 probability-of-hit
 0
 1
-0.5
+0.6
 0.1
 1
 NIL
@@ -850,7 +1041,7 @@ max-angle
 max-angle
 0
 360
-187
+360
 1
 1
 º
@@ -887,7 +1078,7 @@ oxygen-decay
 oxygen-decay
 0
 100
-3
+1
 1
 1
 NIL
@@ -902,7 +1093,7 @@ probability-of-new-gambozino
 probability-of-new-gambozino
 0
 100
-0
+20
 1
 1
 NIL
@@ -917,7 +1108,7 @@ probability-of-new-bubble
 probability-of-new-bubble
 0
 100
-0
+20
 1
 1
 NIL
@@ -932,7 +1123,7 @@ probability-of-new-urchin
 probability-of-new-urchin
 0
 100
-70
+20
 1
 1
 NIL
@@ -948,6 +1139,16 @@ iterations-for-pick-up
 1
 0
 Number
+
+TEXTBOX
+11
+89
+161
+107
+The bigger the slower:
+11
+0.0
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
