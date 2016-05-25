@@ -203,21 +203,22 @@ end
 to update-visible-divers
   let myID who
   set visible-divers (divers in-cone max-distance max-angle) with [who != myID]
-  set known-divers (turtle-set known-divers visible-divers)
+  add-known-divers visible-divers
 end
 
 to update-visible-bubbles
   set visible-bubbles (bubbles in-cone max-distance max-angle)
-  set known-bubbles (turtle-set known-bubbles visible-bubbles)
+  add-known-bubbles visible-bubbles
 end
 
 to update-visible-urchins
   set visible-urchins (urchins in-cone max-distance max-angle)
-  set known-urchins (turtle-set known-urchins visible-urchins)
+  add-known-urchins visible-urchins
 end
 
 to update-visible-gambozinos
   set visible-gambozinos (gambozinos in-cone max-distance max-angle)
+  add-known-gambozinos visible-gambozinos
 end
 
 ;;DIVER SENSORES
@@ -288,8 +289,16 @@ end
 ;;DIVER ACTUATORS
 
 to communicate
-  let d one-of (divers in-cone max-distance max-angle) [distance myself]
-  ask d [
+  let d known-divers
+  let g known-gambozinos
+  let u known-urchins
+  let b known-bubbles
+  ask one-of (visible-divers) [
+    add-known-divers d
+    add-known-gambozinos g
+    add-known-urchins u
+    add-known-bubbles b
+   ]
 end
 
 to attack [animal]
@@ -330,12 +339,12 @@ end
 ;;URCHINS SENSORES
 
 to-report touching-diver?
-  report any? (divers in-cone 1 360)
+  report any? (divers in-cone urchin-distance 360)
 end
 
 ;;URCHINS ACTUATORS
 to attack-diver
-  let diver one-of (divers in-cone 1 360)
+  let diver one-of (divers in-cone urchin-distance 360)
   ask diver [set health health - 5]
 end
 
@@ -378,14 +387,16 @@ to divers-loop
 end
 
 to divers-reactive-loop
-  ifelse can-attack-gambozinos? [print "attack g" attack-gambozino]
+  if close-to-diver? [communicate]
+
+  ifelse can-attack-gambozinos? [attack-gambozino]
   [
-    ifelse can-attack-urchins? [print "attack u" attack-urchin]
+    ifelse can-attack-urchins? [attack-urchin]
     [
-      ifelse close-to-bubble? [print "take b" take-bubble]
+      ifelse close-to-bubble? and is-low-oxygen? [take-bubble]
       [
-        ifelse patch-ahead-clear? and random-float 1 < 0.8 [print "move" move]
-        [print "rotate" rotate-random]
+        ifelse patch-ahead-clear? and random-float 1 < 0.8 [ move]
+        [rotate-random]
         ]]]
 end
 
@@ -406,7 +417,6 @@ to divers-deliberative-BDI-loop
     set desire BDI-options
     set intention BDI-filter
     set plan build-plan-for-intention intention
-    print plan
     ;; If it could not build a plan, the robot should behave as a reactive agent
     if(empty-plan? plan)
       [divers-reactive-loop ]
@@ -423,25 +433,21 @@ to execute-plan-action
 
   ifelse(instruction-caught-oxygen? currentInstruction)
   [
-    print "instruction-caught-oxygen"
     if close-to-bubble? [take-bubble]
     set plan remove-plan-first-instruction plan
   ]
   [ ifelse(instruction-caught-gambozinos? currentInstruction)
     [
-      print "instruction-caught-gambozinos"
       attack-gambozino
       set plan remove-plan-first-instruction plan
     ]
     [ ifelse(instruction-run-from-urchins? currentInstruction)
       [
-        print "instruction-run-from-urchins"
         attack-urchin
         set plan remove-plan-first-instruction plan
       ]
       [ if(instruction-find-adjacent-position? currentInstruction)
       [
-        print "ad"
         let x 0
         let y 0
         ask patch-ahead 1 [set x pxcor set y pycor]
@@ -474,7 +480,6 @@ end
 to gambozinos-loop
   ifelse patch-ahead-clear? and random-float 1 < .8 [move]
                             [rotate-random]
-
 end
 
 to urchins-loop
@@ -484,7 +489,7 @@ to urchins-loop
     ifelse patch-ahead-clear? and random-float 1 < .8 [move]
                               [rotate-random]
     ]
-  ask patch-here [set pcolor pink]
+  ask (patches in-cone urchin-distance max-angle) [set pcolor pink]
 
 
 end
@@ -642,7 +647,6 @@ to-report BDI-filter
         if objective = nobody [set objective min-one-of known-gambozinos [distance myself]]
         ;;if objective = nobody [set objective min-one-of gambozinos [distance myself]]
         if objective = nobody [report build-empty-intention]
-        print objective
         report build-intention desire objective
       ]
     ]
@@ -985,7 +989,7 @@ INPUTBOX
 798
 79
 num-divers
-1
+10
 1
 0
 Number
@@ -1061,7 +1065,7 @@ INPUTBOX
 181
 276
 harpon-distance
-2
+1
 1
 0
 Number
@@ -1087,7 +1091,7 @@ INPUTBOX
 87
 276
 max-distance
-4
+2
 1
 0
 Number
@@ -1209,6 +1213,17 @@ The bigger the slower:
 11
 0.0
 1
+
+INPUTBOX
+182
+216
+267
+276
+urchin-distance
+1
+1
+0
+Number
 
 @#$#@#$#@
 ## WHAT IS IT?
