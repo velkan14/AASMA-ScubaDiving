@@ -44,7 +44,7 @@ divers-own [
 
   agent-architecture
 
-  visible-bubbles
+  visible-bubbles ;;FIXME: Deveria ser uma lista e não um agent-set
   visible-gambozinos
   visible-urchins
   visible-divers
@@ -88,6 +88,7 @@ end
 ;; --------------------------- GO -------------------------------------
 to go
   tick
+  ask patches [set pcolor 102]
   ask bubbles [bubbles-loop]
   ask gambozinos [gambozinos-loop]
   ask urchins [urchins-loop]
@@ -156,15 +157,15 @@ to init-divers [ num ]
     setxy random-pxcor random-pycor
     set label (word "HP:" health "; O2:" oxygen "; Caught:" gambozinos-caught)
 
-    set visible-bubbles (turtles)
-    set visible-gambozinos (turtles)
-    set visible-urchins (turtles)
-    set visible-divers (turtles)
+    set visible-bubbles (no-turtles)
+    set visible-gambozinos (no-turtles)
+    set visible-urchins (no-turtles)
+    set visible-divers (no-turtles)
 
-    set known-bubbles (turtles)
-    set known-gambozinos (turtles)
-    set known-urchins (turtles)
-    set known-divers (turtles)
+    set known-bubbles (no-turtles)
+    set known-gambozinos (no-turtles)
+    set known-urchins (no-turtles)
+    set known-divers (no-turtles)
 
     set agent-architecture architecture
 
@@ -183,17 +184,36 @@ to init-heading
         [set heading 360]]]]
 end
 
+to add-known-divers [gg]
+  set known-divers (turtle-set known-divers gg)
+end
+
+to add-known-bubbles [gg]
+  set known-bubbles (turtle-set known-bubbles gg)
+end
+
+to add-known-urchins [gg]
+  set known-urchins (turtle-set known-urchins gg)
+end
+
+to add-known-gambozinos [gg]
+  set known-gambozinos (turtle-set known-gambozinos gg)
+end
+
 to update-visible-divers
   let myID who
   set visible-divers (divers in-cone max-distance max-angle) with [who != myID]
+  set known-divers (turtle-set known-divers visible-divers)
 end
 
 to update-visible-bubbles
   set visible-bubbles (bubbles in-cone max-distance max-angle)
+  set known-bubbles (turtle-set known-bubbles visible-bubbles)
 end
 
 to update-visible-urchins
   set visible-urchins (urchins in-cone max-distance max-angle)
+  set known-urchins (turtle-set known-urchins visible-urchins)
 end
 
 to update-visible-gambozinos
@@ -202,7 +222,7 @@ end
 
 ;;DIVER SENSORES
 
-
+;;FIXME: verificar estes closes
 to-report close-to-diver?
   report any? visible-divers
 end
@@ -216,12 +236,23 @@ to-report close-to-urchin?
 end
 
 to-report close-to-bubble?
-  report any? visible-bubbles
+  report any? (bubbles in-cone harpon-distance max-angle)
 end
 
 to-report can-attack? [a]
   if distance a < harpon-distance [report true]
   report false
+end
+
+to-report can-attack-gambozinos?
+  ifelse any? (gambozinos in-cone harpon-distance max-angle) [report true]
+  [report false]
+end
+
+to-report can-attack-urchins?
+  report false
+  ifelse any? (urchins in-cone harpon-distance max-angle) [report true]
+  [report false]
 end
 
 to-report harpon-hit?
@@ -248,6 +279,7 @@ end
 
 to-report patch-ahead-clear?
   report true
+
   let result 0
   ask patch-ahead 1 [set result not any? turtles-here]
   report result
@@ -256,6 +288,8 @@ end
 ;;DIVER ACTUATORS
 
 to communicate
+  let d one-of (divers in-cone max-distance max-angle) [distance myself]
+  ask d [
 end
 
 to attack [animal]
@@ -266,11 +300,20 @@ to attack [animal]
       caught-animal
     ]
   ]
+end
 
+to attack-gambozino
+  let g min-one-of (gambozinos in-cone harpon-distance max-angle) [distance myself]
+  attack g
+end
+
+to attack-urchin
+  let u min-one-of (urchins in-cone harpon-distance max-angle) [distance myself]
+  attack u
 end
 
 to take-bubble
-  let bubble one-of visible-bubbles
+  let bubble min-one-of (bubbles in-cone harpon-distance max-angle) [distance myself]
   set oxygen 100
   ask bubble [die]
 end
@@ -329,19 +372,21 @@ to divers-loop
 
   ifelse architecture = "reactive" [divers-reactive-loop]
   [if architecture = "deliberative BDI"[divers-deliberative-BDI-loop]]
+
+  ask (patches in-cone max-distance max-angle) [set pcolor blue]
+  ask (patches in-cone harpon-distance max-angle) [set pcolor yellow]
 end
 
 to divers-reactive-loop
-  ifelse close-to-gambozino? [attack one-of visible-gambozinos with [can-attack? myself]]
+  ifelse can-attack-gambozinos? [print "attack g" attack-gambozino]
   [
-    ifelse close-to-urchin? [attack one-of visible-urchins with [can-attack? myself]]
+    ifelse can-attack-urchins? [print "attack u" attack-urchin]
     [
-      ifelse close-to-bubble? [take-bubble]
+      ifelse close-to-bubble? [print "take b" take-bubble]
       [
-        ifelse patch-ahead-clear? [move]
-        [
-          rotate-random
-   ]]]]
+        ifelse patch-ahead-clear? and random-float 1 < 0.8 [print "move" move]
+        [print "rotate" rotate-random]
+        ]]]
 end
 
 
@@ -364,7 +409,7 @@ to divers-deliberative-BDI-loop
     print plan
     ;; If it could not build a plan, the robot should behave as a reactive agent
     if(empty-plan? plan)
-      [ divers-reactive-loop ]
+      [divers-reactive-loop ]
   ]
 end
 
@@ -385,13 +430,14 @@ to execute-plan-action
   [ ifelse(instruction-caught-gambozinos? currentInstruction)
     [
       print "instruction-caught-gambozinos"
-      if close-to-gambozino? [attack one-of visible-gambozinos with [can-attack? myself]]
+      attack-gambozino
       set plan remove-plan-first-instruction plan
     ]
-    [ ifelse(instruction-attack-urchins? currentInstruction)
+    [ ifelse(instruction-run-from-urchins? currentInstruction)
       [
-        print "instruction-attack-urchins"
-        if close-to-urchin? [attack one-of visible-urchins with [can-attack? myself]]
+        print "instruction-run-from-urchins"
+        attack-urchin
+        set plan remove-plan-first-instruction plan
       ]
       [ if(instruction-find-adjacent-position? currentInstruction)
       [
@@ -426,18 +472,19 @@ to bubbles-loop
 end
 
 to gambozinos-loop
-  ifelse patch-ahead-clear? [move]
+  ifelse patch-ahead-clear? and random-float 1 < .8 [move]
                             [rotate-random]
 
 end
 
 to urchins-loop
-
   ifelse touching-diver? [attack-diver]
-  [ifelse patch-ahead-clear? [move]
+  [
+
+    ifelse patch-ahead-clear? and random-float 1 < .8 [move]
                               [rotate-random]
     ]
-  ask patch-here [set pcolor blue]
+  ask patch-here [set pcolor pink]
 
 
 end
@@ -519,8 +566,8 @@ to-report intention-succeeded? [iintention]
 
   set ddesire get-intention-desire iintention
   ifelse(ddesire = "caught-oxygen")[ report oxygen = 100 ]
-   [ifelse(ddesire = "attack-urchins")
-    [ report get-intention-agent iintention = nobody]
+   [ifelse(ddesire = "run-from-urchins")
+    [ report not close-to-urchin?]
     [if(ddesire = "caught-gambozinos")
       [ report get-intention-agent iintention = nobody]
     ]
@@ -532,6 +579,9 @@ end
 ;;;  However, in this scenario, the only intention that can become impossible is "grab", which is already tested in 'execute-plan-action'
 ;;;
 to-report impossible-intention? [iintention]
+  let ddesire get-intention-desire iintention
+  if ddesire = "caught-gambozinos" and is-low-oxygen? [report true]
+  if ddesire = "caught-gambozinos" and is-low-health? and any? (urchins in-cone harpon-distance 120) [report true]
   report false
 end
 
@@ -548,20 +598,14 @@ end
 
 ;;;
 ;;; According to the current beliefs, it selects the robot's desires
-;;; Its values can be "caught-oxygen", "attack-urchins" or "caught-gambozinos"
+;;; Its values can be "caught-oxygen", "run-from-urchins" or "caught-gambozinos"
 ;;; Reference: Chap.4 de [Wooldridge02]
 ;;;
 to-report BDI-options
 
-  ifelse is-low-oxygen?
+  ifelse is-low-oxygen? [report "caught-oxygen"]
   [
-    report "caught-oxygen"
-  ]
-  [
-    ifelse is-low-health?
-    [
-      report "attack-urchins"
-    ]
+    ifelse is-low-health? and close-to-urchin? [report "run-from-urchins"]
     [
       report "caught-gambozinos"
     ]
@@ -576,30 +620,29 @@ to-report BDI-filter
   let objective 0
   ifelse desire = "caught-oxygen"
   [
-    set objective one-of visible-bubbles
-
-    if objective = nobody [set objective min-one-of bubbles [distance myself]]
+    set objective min-one-of visible-bubbles [distance myself]
+    if objective = nobody [set objective min-one-of known-bubbles [distance myself]]
     if objective = nobody [report build-empty-intention]
 
     report build-intention desire objective
   ]
   [
-    ifelse desire = "attack-urchins"
+    ifelse desire = "run-from-urchins"
     [
-      set objective one-of visible-urchins
-      ;;if objective = nobody [set objective min-one-of known-urchins [distance myself]]
-      if objective = nobody [set objective min-one-of urchins [distance myself]]
+      set objective min-one-of visible-urchins [distance myself]
+      if objective = nobody [set objective min-one-of known-urchins [distance myself]]
+      ;;if objective = nobody [set objective min-one-of urchins [distance myself]]
       if objective = nobody [report build-empty-intention]
       report build-intention desire objective
     ]
     [
       if desire = "caught-gambozinos"
       [
-        set objective one-of visible-gambozinos
-        ;;if objective = nobody [set objective min-one-of known-gambozinos [distance myself]]
-        if objective = nobody [set objective min-one-of gambozinos [distance myself]]
+        set objective min-one-of visible-gambozinos [distance myself]
+        if objective = nobody [set objective min-one-of known-gambozinos [distance myself]]
+        ;;if objective = nobody [set objective min-one-of gambozinos [distance myself]]
         if objective = nobody [report build-empty-intention]
-
+        print objective
         report build-intention desire objective
       ]
     ]
@@ -615,6 +658,18 @@ to-report get-adj-cors [a]
   ;;report (list (x + 1) (y + 1))
 end
 
+to-report get-far-cors [a]
+  let x 0
+  let y 0
+  ask a [set x xcor set y ycor]
+
+  let xdist x - xcor
+  let ydist y - ycor
+  if xdist != 0 [ifelse xdist < 0 [set xdist -1][set xdist 1]]
+  if ydist != 0 [ifelse ydist < 0 [set ydist -1][set ydist 1]]
+  report (list (xcor - xdist * 2) (ycor - ydist * 2))
+end
+
 ;;;
 ;;;  Create a plan for a given intention
 ;;;
@@ -626,19 +681,24 @@ to-report build-plan-for-intention [iintention]
   if  not empty-intention? iintention
   [
     let aagent get-intention-agent iintention
-    set new-plan build-path-plan (list xcor ycor) get-adj-cors aagent
 
-    if get-intention-desire iintention = "caught-oxygen"
+    ifelse get-intention-desire iintention = "run-from-urchins"
     [
-      set new-plan add-instruction-to-plan new-plan build-instruction-caught-oxygen
+      set new-plan build-path-plan (list xcor ycor) get-far-cors aagent
+      set new-plan add-instruction-to-plan new-plan build-instruction-run-from-urchins
     ]
-    if get-intention-desire iintention = "attack-urchins"
     [
-      set new-plan add-instruction-to-plan new-plan build-instruction-attack-urchins
-    ]
-    if get-intention-desire iintention = "caught-gambozinos"
-    [
-      set new-plan add-instruction-to-plan new-plan build-instruction-caught-gambozinos
+      set new-plan build-path-plan (list xcor ycor) get-adj-cors aagent
+
+      if get-intention-desire iintention = "caught-oxygen"
+      [
+        set new-plan add-instruction-to-plan new-plan build-instruction-caught-oxygen
+      ]
+
+      if get-intention-desire iintention = "caught-gambozinos"
+      [
+        set new-plan add-instruction-to-plan new-plan build-instruction-caught-gambozinos
+      ]
     ]
   ]
 
@@ -700,8 +760,8 @@ to-report build-instruction-caught-oxygen []
   report build-instruction "co" ""
 end
 
-to-report build-instruction-attack-urchins []
-  report build-instruction "au" ""
+to-report build-instruction-run-from-urchins []
+  report build-instruction "rfu" ""
 end
 
 to-report build-instruction-caught-gambozinos []
@@ -720,8 +780,8 @@ to-report instruction-caught-gambozinos? [iinstruction]
   report get-instruction-type iinstruction = "cg"
 end
 
-to-report instruction-attack-urchins? [iinstruction]
-  report get-instruction-type iinstruction = "au"
+to-report instruction-run-from-urchins? [iinstruction]
+  report get-instruction-type iinstruction = "rfu"
 end
 
 to-report build-instruction-find-adjacent-position [aadjacent-position]
@@ -848,13 +908,13 @@ to-report heuristic [node mgoal]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-342
-106
-1249
+349
+114
+1242
 618
 34
 18
-13.0
+12.8
 1
 10
 1
@@ -875,10 +935,10 @@ ticks
 30.0
 
 BUTTON
-31
-32
-97
-65
+200
+409
+266
+442
 NIL
 setup
 NIL
@@ -892,10 +952,10 @@ NIL
 1
 
 BUTTON
-115
-32
-178
-65
+273
+409
+336
+442
 go
 go
 T
@@ -947,7 +1007,7 @@ INPUTBOX
 483
 80
 num-gambozinos
-15
+10
 1
 0
 Number
@@ -1093,7 +1153,7 @@ probability-of-new-gambozino
 probability-of-new-gambozino
 0
 100
-20
+25
 1
 1
 NIL
@@ -1108,7 +1168,7 @@ probability-of-new-bubble
 probability-of-new-bubble
 0
 100
-20
+25
 1
 1
 NIL
@@ -1123,7 +1183,7 @@ probability-of-new-urchin
 probability-of-new-urchin
 0
 100
-20
+25
 1
 1
 NIL
