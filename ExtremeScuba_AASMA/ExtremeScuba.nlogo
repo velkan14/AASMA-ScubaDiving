@@ -28,6 +28,8 @@ turtles-own [
   observed-actions
 
   incoming-qeue
+
+  my-type
 ]
 
 divers-own [
@@ -60,6 +62,13 @@ divers-own [
   plan
   intention
   desire
+
+  ;;Things for emotions
+  love
+  anger
+  fear
+  sadness
+  happiness
 ]
 
 to setup
@@ -105,7 +114,9 @@ to init-bubbles [ num ]
     set color 87 ;; light cyan = 87
     setxy random-pxcor random-pycor
     set max-speed 0
+    set my-type "bubble"
     init-heading
+
   ]
 end
 
@@ -117,6 +128,7 @@ to init-gambozinos [ num ]
     set color yellow
     setxy random-pxcor random-pycor
     init-heading
+    set my-type "gambozino"
     set rest 0
   ]
 end
@@ -129,6 +141,7 @@ to init-urchins [ num ]
     set color magenta + 1
     setxy random-pxcor random-pycor
     init-heading
+    set my-type "urchin"
     set rest 0
   ]
 end
@@ -162,16 +175,24 @@ to init-divers [ num ]
     set visible-urchins (no-turtles)
     set visible-divers (no-turtles)
 
-    set known-bubbles (no-turtles)
-    set known-gambozinos (no-turtles)
-    set known-urchins (no-turtles)
-    set known-divers (no-turtles)
+    set known-bubbles (list)
+    set known-gambozinos (list)
+    set known-urchins (list)
+    set known-divers (list)
 
     set agent-architecture architecture
 
     set last-action ""
     set plan build-empty-plan
     set rest 0
+
+    set my-type "diver"
+
+    set love 0
+    set anger 0
+    set fear 0
+    set sadness 0
+    set happiness 0
   ]
 end
 
@@ -185,40 +206,113 @@ to init-heading
 end
 
 to add-known-divers [gg]
-  set known-divers (turtle-set known-divers gg)
+
 end
 
 to add-known-bubbles [gg]
-  set known-bubbles (turtle-set known-bubbles gg)
+
 end
 
 to add-known-urchins [gg]
-  set known-urchins (turtle-set known-urchins gg)
+
 end
 
 to add-known-gambozinos [gg]
-  set known-gambozinos (turtle-set known-gambozinos gg)
+  let l known-gambozinos
+  let id who
+  ask gg [set l lput new-struct self id l]
+  set known-gambozinos l
 end
 
 to update-visible-divers
-  let myID who
-  set visible-divers (divers in-cone max-distance max-angle) with [who != myID]
-  add-known-divers visible-divers
+  let id who
+  let l known-divers
+
+  set visible-divers (divers in-cone max-distance max-angle) with [who != id]
+
+  ask gg [set l lput new-struct self id l]
+  set known-divers l
 end
 
 to update-visible-bubbles
+  let l known-bubbles
+  let id who
+
   set visible-bubbles (bubbles in-cone max-distance max-angle)
-  add-known-bubbles visible-bubbles
+
+  ask gg [set l lput new-struct self id l]
+  set known-bubbles l
 end
 
 to update-visible-urchins
+  let l known-urchins
+  let id who
+
   set visible-urchins (urchins in-cone max-distance max-angle)
-  add-known-urchins visible-urchins
+
+
+  ask gg [set l lput new-struct self id l]
+  set known-urchins l
 end
 
 to update-visible-gambozinos
   set visible-gambozinos (gambozinos in-cone max-distance max-angle)
   add-known-gambozinos visible-gambozinos
+end
+
+
+to-report new-struct[aagent diver-id]
+  let x 0
+  let y 0
+  let t 0
+  let id 0
+  ask aagent [
+    set x xcor
+    set y ycor
+    set t my-type
+    set id who
+  ]
+  report (list x y t id diver-id 0 0 0 0 0)
+end
+
+to-report get-xcor-struct [s]
+  report item 0 s
+end
+
+to-report get-ycor-struct [s]
+  report item 1 s
+end
+
+to-report get-type-struct [s]
+  report item 2 s
+end
+
+to-report get-id-struct [s]
+  report item 3 s
+end
+
+to-report get-diver-id-struct [s]
+  report item 4 s
+end
+
+to-report get-love-struct [s]
+  report item 5 s
+end
+
+to-report get-anger-struct [s]
+  report item 6 s
+end
+
+to-report get-fear-struct [s]
+  report item 7 s
+end
+
+to-report get-sadness-struct [s]
+  report item 8 s
+end
+
+to-report get-happiness-struct [s]
+  report item 9 s
 end
 
 ;;DIVER SENSORES
@@ -644,9 +738,10 @@ to-report BDI-filter
       if desire = "caught-gambozinos"
       [
         set objective min-one-of visible-gambozinos [distance myself]
-        if objective = nobody [set objective min-one-of known-gambozinos [distance myself]]
-        ;;if objective = nobody [set objective min-one-of gambozinos [distance myself]]
-        if objective = nobody [report build-empty-intention]
+        ;;if objective = nobody [set objective min-one-of known-gambozinos [distance myself]]
+        if empty? known-gambozinos [report build-empty-intention]
+        set objective one-of known-gambozinos
+
         report build-intention desire objective
       ]
     ]
@@ -655,10 +750,7 @@ to-report BDI-filter
 end
 
 to-report get-adj-cors [a]
-  let x 0
-  let y 0
-  ask a [set x xcor set y ycor]
-  report (list x y)
+  report (list get-xcor-struct a get-ycor-struct a)
   ;;report (list (x + 1) (y + 1))
 end
 
@@ -909,6 +1001,36 @@ to-report heuristic [node mgoal]
 
   report cost +
          2 * (abs(x - item 0 mgoal) +  abs(y - item 1 mgoal))
+end
+
+;;;
+;;;  EMOTIONS -------------------------------------------------------
+;;;
+
+to divers-deliberative-BDI-emotions-loop
+    ;;if goal-succeeded?
+    ;;[stop]
+
+  set last-action ""
+  ifelse not (empty-plan? plan or intention-succeeded? intention or impossible-intention? intention)
+  [
+    execute-plan-action
+    update-beliefs
+    if random-float 1 < 0.1 [
+      set desire BDI-options
+      set intention BDI-filter
+    ]
+  ]
+  [
+    update-beliefs
+    ;; Check the robot's options
+    set desire BDI-options
+    set intention BDI-filter
+    set plan build-plan-for-intention intention
+    ;; If it could not build a plan, the robot should behave as a reactive agent
+    if(empty-plan? plan)
+      [divers-reactive-loop ]
+  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
