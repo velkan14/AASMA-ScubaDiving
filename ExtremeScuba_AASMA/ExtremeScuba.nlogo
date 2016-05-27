@@ -378,6 +378,18 @@ to-report close-to-bubble?
   report any? (bubbles in-cone harpon-distance max-angle)
 end
 
+to-report close-to-bubble-id? [id]
+  report any? (bubbles in-cone harpon-distance max-angle) with [id = who]
+end
+
+to-report can-attack-gambozinos-id? [id]
+  report any? (gambozinos in-cone harpon-distance max-angle) with [id = who]
+end
+
+to-report can-attack-urchins-id? [id]
+  report any? (urchins in-cone harpon-distance max-angle) with [id = who]
+end
+
 to-report can-attack? [a]
   if distance a < harpon-distance [report true]
   report false
@@ -462,6 +474,18 @@ to attack-gambozino
   ]
 end
 
+to attack-gambozino-id [id]
+  let g one-of (gambozinos in-cone harpon-distance max-angle) with [id = who]
+  if g != nobody[
+    if harpon-hit?
+    [
+      ask g [die]
+      remove-known-gambozinos id
+      caught-animal
+    ]
+  ]
+end
+
 to attack-urchin
   let u min-one-of (urchins in-cone harpon-distance max-angle) [distance myself]
   if u != nobody[
@@ -476,8 +500,27 @@ to attack-urchin
   ]
 end
 
+to attack-urchin-id [id]
+  let u one-of (urchins in-cone harpon-distance max-angle) with [id = who]
+  if u != nobody[
+    if harpon-hit?
+    [
+      ask u [die]
+      remove-known-urchins id
+      caught-animal
+
+    ]
+  ]
+end
+
 to take-bubble
   let bubble min-one-of (bubbles in-cone harpon-distance max-angle) [distance myself]
+  set oxygen 100
+  ask bubble [die]
+end
+
+to take-bubble-id [id]
+  let bubble one-of (bubbles in-cone harpon-distance max-angle) with [id = who]
   set oxygen 100
   ask bubble [die]
 end
@@ -600,17 +643,28 @@ to execute-plan-action
 
   ifelse(instruction-caught-oxygen? currentInstruction)
   [
-    if close-to-bubble? [take-bubble]
+    let id item 1 currentInstruction
+    ifelse close-to-bubble-id? id [take-bubble-id id]
+    [;;FICAR CHATEADO!!!
+      remove-known-bubbles id]
+
     set plan remove-plan-first-instruction plan
   ]
   [ ifelse(instruction-caught-gambozinos? currentInstruction)
     [
-      attack-gambozino
+      let id item 1 currentInstruction
+      ifelse can-attack-gambozinos-id? id [attack-gambozino-id id]
+      [;;FICAR CHATEADO com quem deu esta informação!!!
+        remove-known-gambozinos id]
+
       set plan remove-plan-first-instruction plan
     ]
     [ ifelse(instruction-run-from-urchins? currentInstruction)
       [
-        attack-urchin
+        let id item 1 currentInstruction
+      ifelse can-attack-urchins-id? id [attack-urchin-id id]
+      [;;FICAR CHATEADO com quem deu esta informação!!!
+        remove-known-urchins id]
         set plan remove-plan-first-instruction plan
       ]
       [ if(instruction-find-adjacent-position? currentInstruction)
@@ -1271,7 +1325,7 @@ CHOOSER
 architecture
 architecture
 "reactive" "deliberative BDI" "BDI w/ emotions"
-0
+1
 
 INPUTBOX
 90
@@ -1413,7 +1467,7 @@ INPUTBOX
 202
 620
 iterations-for-expedition
-1000
+500
 1
 0
 Number
