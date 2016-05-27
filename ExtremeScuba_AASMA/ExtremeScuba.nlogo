@@ -41,9 +41,6 @@ divers-own [
   got;;
   actions-box;;
 
-  ;;can-communicate?
-  ;;can-use-emotions?
-
   agent-architecture
 
   visible-bubbles ;;FIXME: Deveria ser uma lista e não um agent-set
