@@ -104,6 +104,10 @@ to go
   ask divers [divers-loop]
 
   create-random
+
+  if count divers <= 0 or iteration > iterations-for-expedition [stop]
+  set iteration iteration + 1
+
 end
 ;; ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| GO
 
@@ -374,29 +378,19 @@ to-report close-to-bubble?
   report any? (bubbles in-cone harpon-distance max-angle)
 end
 
-to-report close-to-bubble-id? [id]
-  report any? (bubbles in-cone harpon-distance max-angle) with [id = who]
-end
-
 to-report can-attack? [a]
-  report distance a < harpon-distance
+  if distance a < harpon-distance [report true]
+  report false
 end
 
 to-report can-attack-gambozinos?
-  report any? (gambozinos in-cone harpon-distance max-angle)
-end
-
-to-report can-attack-gambozinos-id? [id]
-  report any? (gambozinos in-cone harpon-distance max-angle) with [id = who]
+  ifelse any? (gambozinos in-cone harpon-distance max-angle) [report true]
+  [report false]
 end
 
 to-report can-attack-urchins?
-  report false
-  report any? (urchins in-cone harpon-distance max-angle)
-end
-
-to-report can-attack-urchins-id? [id]
-  report any? (urchins in-cone harpon-distance max-angle) with [id = who]
+  ifelse any? (urchins in-cone harpon-distance max-angle) [report true]
+  [report false]
 end
 
 to-report harpon-hit?
@@ -484,12 +478,6 @@ end
 
 to take-bubble
   let bubble min-one-of (bubbles in-cone harpon-distance max-angle) [distance myself]
-  set oxygen 100
-  ask bubble [die]
-end
-
-to take-bubble-id [id]
-  let bubble one-of (bubbles in-cone harpon-distance max-angle) with [id = who]
   set oxygen 100
   ask bubble [die]
 end
@@ -612,10 +600,7 @@ to execute-plan-action
 
   ifelse(instruction-caught-oxygen? currentInstruction)
   [
-    let id item 1 currentInstruction
-    ifelse close-to-bubble-id? id [take-bubble-id id]
-    [;;FICAR CHATEADO!!!
-      remove-known-bubbles id]
+    if close-to-bubble? [take-bubble]
     set plan remove-plan-first-instruction plan
   ]
   [ ifelse(instruction-caught-gambozinos? currentInstruction)
@@ -1168,10 +1153,10 @@ ticks
 30.0
 
 BUTTON
-200
-409
-266
-442
+164
+382
+230
+415
 NIL
 setup
 NIL
@@ -1185,10 +1170,10 @@ NIL
 1
 
 BUTTON
-273
-409
-336
-442
+237
+382
+300
+415
 go
 go
 T
@@ -1218,7 +1203,7 @@ INPUTBOX
 798
 79
 num-divers
-3
+10
 1
 0
 Number
@@ -1286,7 +1271,7 @@ CHOOSER
 architecture
 architecture
 "reactive" "deliberative BDI" "BDI w/ emotions"
-1
+0
 
 INPUTBOX
 90
@@ -1308,7 +1293,7 @@ probability-of-hit
 probability-of-hit
 0
 1
-0.6
+1
 0.1
 1
 NIL
@@ -1416,18 +1401,18 @@ probability-of-new-urchin
 probability-of-new-urchin
 0
 1
-0.1
+0
 0.1
 1
 NIL
 HORIZONTAL
 
 INPUTBOX
-226
-464
-335
-524
-iterations-for-pick-up
+11
+560
+202
+620
+iterations-for-expedition
 1000
 1
 0
