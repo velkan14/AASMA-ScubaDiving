@@ -544,10 +544,9 @@ to divers-reactive-loop
   if close-to-bubble? [take-bubble]
   if can-attack-gambozinos? [attack-gambozino]
   if can-attack-urchins? [attack-urchin]
-  [ifelse patch-ahead-clear? and random-float 1 < 0.8
+  ifelse patch-ahead-clear? and random-float 1 < 0.8
     [ move]
     [rotate-random]
-  ]
 end
 
 ;;to divers-reactive-loop
@@ -660,11 +659,11 @@ to urchins-loop
 end
 
 to create-random
-  let r random 100
+  let r random-float 1
   if r < probability-of-new-urchin [init-urchins 1]
-  set r random 100
+  set r random-float 1
   if r < probability-of-new-bubble [init-bubbles 1]
-  set r random 100
+  set r random-float 1
   if r < probability-of-new-gambozino [init-gambozinos 1]
 end
 
@@ -1190,7 +1189,7 @@ INPUTBOX
 581
 79
 num-bubbles
-15
+10
 1
 0
 Number
@@ -1201,7 +1200,7 @@ INPUTBOX
 798
 79
 num-divers
-1
+3
 1
 0
 Number
@@ -1212,7 +1211,7 @@ INPUTBOX
 684
 79
 num-urchins
-10
+5
 1
 0
 Number
@@ -1369,7 +1368,7 @@ probability-of-new-gambozino
 probability-of-new-gambozino
 0
 1
-0.2
+0.1
 0.1
 1
 NIL
@@ -1399,7 +1398,7 @@ probability-of-new-urchin
 probability-of-new-urchin
 0
 1
-0.2
+0.1
 0.1
 1
 NIL
