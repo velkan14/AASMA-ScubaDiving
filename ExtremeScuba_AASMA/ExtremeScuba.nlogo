@@ -542,13 +542,12 @@ to divers-loop
 end
 
 to divers-reactive-loop
-  if close-to-diver? [communicate]
 
   ifelse close-to-bubble? and is-low-oxygen? [take-bubble]
   [
-    ifelse can-attack-gambozinos? [attack-gambozino]
+    ifelse can-attack-urchins? [attack-urchin]
     [
-      ifelse can-attack-urchins? [attack-urchin]
+      ifelse can-attack-gambozinos? [attack-gambozino]
       [
         ifelse patch-ahead-clear? and random-float 1 < 0.8 [ move]
         [rotate-random]
@@ -1181,7 +1180,7 @@ INPUTBOX
 581
 79
 num-bubbles
-5
+20
 1
 0
 Number
@@ -1203,7 +1202,7 @@ INPUTBOX
 684
 79
 num-urchins
-2
+5
 1
 0
 Number
@@ -1260,7 +1259,7 @@ CHOOSER
 architecture
 architecture
 "reactive" "deliberative BDI" "BDI w/ emotions"
-1
+0
 
 INPUTBOX
 90
@@ -1375,7 +1374,7 @@ probability-of-new-bubble
 probability-of-new-bubble
 0
 1
-0.2
+0.1
 0.1
 1
 NIL
@@ -1427,6 +1426,27 @@ urchin-distance
 1
 0
 Number
+
+PLOT
+9
+631
+648
+984
+Turtles count
+iteration
+Num
+0.0
+1000.0
+0.0
+100.0
+true
+true
+"" ""
+PENS
+"divers" 1.0 0 -15040220 true "" "plot count divers"
+"gambozinos" 1.0 0 -13791810 true "" "plot count gambozinos"
+"urchins" 1.0 0 -5825686 true "" "plot count urchins"
+"bubbles" 1.0 0 -16777216 true "" "plot count bubbles"
 
 @#$#@#$#@
 ## WHAT IS IT?
