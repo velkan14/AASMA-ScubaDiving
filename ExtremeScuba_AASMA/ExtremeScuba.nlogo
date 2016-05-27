@@ -1203,7 +1203,7 @@ INPUTBOX
 798
 79
 num-divers
-10
+3
 1
 0
 Number
@@ -1401,7 +1401,7 @@ probability-of-new-urchin
 probability-of-new-urchin
 0
 1
-0
+0.1
 0.1
 1
 NIL
