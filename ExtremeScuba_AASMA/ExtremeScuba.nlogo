@@ -541,16 +541,28 @@ end
 to divers-reactive-loop
   if close-to-diver? [communicate]
 
-  ifelse can-attack-gambozinos? [attack-gambozino]
-  [
-    ifelse can-attack-urchins? [attack-urchin]
-    [
-      ifelse close-to-bubble? and is-low-oxygen? [take-bubble]
-      [
-        ifelse patch-ahead-clear? and random-float 1 < 0.8 [ move]
-        [rotate-random]
-        ]]]
+  if close-to-bubble? [take-bubble]
+  if can-attack-gambozinos? [attack-gambozino]
+  if can-attack-urchins? [attack-urchin]
+  [ifelse patch-ahead-clear? and random-float 1 < 0.8
+    [ move]
+    [rotate-random]
+  ]
 end
+
+;;to divers-reactive-loop
+;;  if close-to-diver? [communicate]
+;;
+;;  ifelse can-attack-gambozinos? [attack-gambozino]
+;;  [
+;;    ifelse can-attack-urchins? [attack-urchin]
+;;    [
+;;      ifelse close-to-bubble? and is-low-oxygen? [take-bubble]
+;;      [
+;;        ifelse patch-ahead-clear? and random-float 1 < 0.8 [ move]
+;;        [rotate-random]
+;;        ]]]
+;;end
 
 
 to divers-deliberative-BDI-loop
@@ -1257,7 +1269,7 @@ CHOOSER
 architecture
 architecture
 "reactive" "deliberative BDI" "BDI w/ emotions"
-1
+0
 
 INPUTBOX
 90
@@ -1349,16 +1361,16 @@ NIL
 HORIZONTAL
 
 SLIDER
-12
-481
-201
-514
+11
+480
+203
+513
 probability-of-new-gambozino
 probability-of-new-gambozino
 0
-100
-25
 1
+0.2
+0.1
 1
 NIL
 HORIZONTAL
@@ -1366,14 +1378,14 @@ HORIZONTAL
 SLIDER
 12
 445
-201
+203
 478
 probability-of-new-bubble
 probability-of-new-bubble
 0
-100
-25
 1
+0.2
+0.1
 1
 NIL
 HORIZONTAL
@@ -1381,14 +1393,14 @@ HORIZONTAL
 SLIDER
 12
 517
-201
+204
 550
 probability-of-new-urchin
 probability-of-new-urchin
 0
-100
-25
 1
+0.2
+0.1
 1
 NIL
 HORIZONTAL
