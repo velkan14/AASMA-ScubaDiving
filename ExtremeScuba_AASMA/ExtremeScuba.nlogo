@@ -378,18 +378,6 @@ to-report close-to-bubble?
   report any? (bubbles in-cone harpon-distance max-angle)
 end
 
-to-report close-to-bubble-id? [id]
-  report any? (bubbles in-cone harpon-distance max-angle) with [id = who]
-end
-
-to-report can-attack-gambozinos-id? [id]
-  report any? (gambozinos in-cone harpon-distance max-angle) with [id = who]
-end
-
-to-report can-attack-urchins-id? [id]
-  report any? (urchins in-cone harpon-distance max-angle) with [id = who]
-end
-
 to-report can-attack? [a]
   if distance a < harpon-distance [report true]
   report false
@@ -474,18 +462,6 @@ to attack-gambozino
   ]
 end
 
-to attack-gambozino-id [id]
-  let g one-of (gambozinos in-cone harpon-distance max-angle) with [id = who]
-  if g != nobody[
-    if harpon-hit?
-    [
-      ask g [die]
-      remove-known-gambozinos id
-      caught-animal
-    ]
-  ]
-end
-
 to attack-urchin
   let u min-one-of (urchins in-cone harpon-distance max-angle) [distance myself]
   if u != nobody[
@@ -500,27 +476,8 @@ to attack-urchin
   ]
 end
 
-to attack-urchin-id [id]
-  let u one-of (urchins in-cone harpon-distance max-angle) with [id = who]
-  if u != nobody[
-    if harpon-hit?
-    [
-      ask u [die]
-      remove-known-urchins id
-      caught-animal
-
-    ]
-  ]
-end
-
 to take-bubble
   let bubble min-one-of (bubbles in-cone harpon-distance max-angle) [distance myself]
-  set oxygen 100
-  ask bubble [die]
-end
-
-to take-bubble-id [id]
-  let bubble one-of (bubbles in-cone harpon-distance max-angle) with [id = who]
   set oxygen 100
   ask bubble [die]
 end
@@ -587,27 +544,16 @@ end
 to divers-reactive-loop
   if close-to-diver? [communicate]
 
-  if close-to-bubble? [take-bubble]
-  if can-attack-gambozinos? [attack-gambozino]
-  if can-attack-urchins? [attack-urchin]
-  ifelse patch-ahead-clear? and random-float 1 < 0.8
-    [ move]
-    [rotate-random]
+  ifelse close-to-bubble? and is-low-oxygen? [take-bubble]
+  [
+    ifelse can-attack-gambozinos? [attack-gambozino]
+    [
+      ifelse can-attack-urchins? [attack-urchin]
+      [
+        ifelse patch-ahead-clear? and random-float 1 < 0.8 [ move]
+        [rotate-random]
+        ]]]
 end
-
-;;to divers-reactive-loop
-;;  if close-to-diver? [communicate]
-;;
-;;  ifelse can-attack-gambozinos? [attack-gambozino]
-;;  [
-;;    ifelse can-attack-urchins? [attack-urchin]
-;;    [
-;;      ifelse close-to-bubble? and is-low-oxygen? [take-bubble]
-;;      [
-;;        ifelse patch-ahead-clear? and random-float 1 < 0.8 [ move]
-;;        [rotate-random]
-;;        ]]]
-;;end
 
 
 to divers-deliberative-BDI-loop
@@ -643,28 +589,17 @@ to execute-plan-action
 
   ifelse(instruction-caught-oxygen? currentInstruction)
   [
-    let id item 1 currentInstruction
-    ifelse close-to-bubble-id? id [take-bubble-id id]
-    [;;FICAR CHATEADO!!!
-      remove-known-bubbles id]
-
+    if close-to-bubble? [take-bubble]
     set plan remove-plan-first-instruction plan
   ]
   [ ifelse(instruction-caught-gambozinos? currentInstruction)
     [
-      let id item 1 currentInstruction
-      ifelse can-attack-gambozinos-id? id [attack-gambozino-id id]
-      [;;FICAR CHATEADO com quem deu esta informação!!!
-        remove-known-gambozinos id]
-
+      attack-gambozino
       set plan remove-plan-first-instruction plan
     ]
     [ ifelse(instruction-run-from-urchins? currentInstruction)
       [
-        let id item 1 currentInstruction
-      ifelse can-attack-urchins-id? id [attack-urchin-id id]
-      [;;FICAR CHATEADO com quem deu esta informação!!!
-        remove-known-urchins id]
+        attack-urchin
         set plan remove-plan-first-instruction plan
       ]
       [ if(instruction-find-adjacent-position? currentInstruction)
@@ -1246,7 +1181,7 @@ INPUTBOX
 581
 79
 num-bubbles
-10
+5
 1
 0
 Number
@@ -1257,7 +1192,7 @@ INPUTBOX
 798
 79
 num-divers
-3
+5
 1
 0
 Number
@@ -1268,7 +1203,7 @@ INPUTBOX
 684
 79
 num-urchins
-5
+2
 1
 0
 Number
@@ -1347,7 +1282,7 @@ probability-of-hit
 probability-of-hit
 0
 1
-1
+0.8
 0.1
 1
 NIL
@@ -1467,7 +1402,7 @@ INPUTBOX
 202
 620
 iterations-for-expedition
-500
+1000
 1
 0
 Number
