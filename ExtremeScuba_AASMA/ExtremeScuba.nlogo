@@ -205,23 +205,32 @@ to init-heading
         [set heading 360]]]]
 end
 
-to add-known-divers [gg]
-
+to add-known-divers [ll]
+  foreach ll [
+    set known-divers lput ? known-divers
+  ]
+  set known-divers remove-duplicates known-divers
 end
 
-to add-known-bubbles [gg]
-
+to add-known-bubbles [ll]
+  foreach ll [
+    set known-bubbles lput ? known-bubbles
+  ]
+  set known-bubbles remove-duplicates known-bubbles
 end
 
-to add-known-urchins [gg]
-
+to add-known-urchins [ll]
+  foreach ll [
+    set known-urchins lput ? known-urchins
+  ]
+  set known-urchins remove-duplicates known-urchins
 end
 
-to add-known-gambozinos [gg]
-  let l known-gambozinos
-  let id who
-  ask gg [set l lput new-struct self id l]
-  set known-gambozinos l
+to add-known-gambozinos [ll]
+  foreach ll [
+    set known-gambozinos lput ? known-gambozinos
+  ]
+  set known-gambozinos remove-duplicates known-gambozinos
 end
 
 to update-visible-divers
@@ -230,7 +239,7 @@ to update-visible-divers
 
   set visible-divers (divers in-cone max-distance max-angle) with [who != id]
 
-  ask gg [set l lput new-struct self id l]
+  ask visible-divers [set l lput new-struct self id l]
   set known-divers l
 end
 
@@ -240,7 +249,7 @@ to update-visible-bubbles
 
   set visible-bubbles (bubbles in-cone max-distance max-angle)
 
-  ask gg [set l lput new-struct self id l]
+  ask visible-bubbles [set l lput new-struct self id l]
   set known-bubbles l
 end
 
@@ -250,14 +259,18 @@ to update-visible-urchins
 
   set visible-urchins (urchins in-cone max-distance max-angle)
 
-
-  ask gg [set l lput new-struct self id l]
+  ask visible-urchins [set l lput new-struct self id l]
   set known-urchins l
 end
 
 to update-visible-gambozinos
+  let l known-gambozinos
+  let id who
+
   set visible-gambozinos (gambozinos in-cone max-distance max-angle)
-  add-known-gambozinos visible-gambozinos
+
+  ask visible-gambozinos [set l lput new-struct self id l]
+  set known-gambozinos l
 end
 
 
@@ -273,6 +286,33 @@ to-report new-struct[aagent diver-id]
     set id who
   ]
   report (list x y t id diver-id 0 0 0 0 0)
+end
+
+to remove-known-gambozinos [id]
+  let struct get-gambozino-struct id
+  set known-gambozinos remove struct known-gambozinos
+end
+
+to remove-known-urchins [id]
+  let struct get-urchin-struct id
+  set known-urchins remove struct known-urchins
+end
+
+to remove-known-bubbles [id]
+  let struct get-bubble-struct id
+  set known-bubbles remove struct known-bubbles
+end
+
+to-report get-gambozino-struct [id]
+  foreach known-gambozinos [if get-id-struct ? = id [report ?]]
+end
+
+to-report get-urchin-struct [id]
+  foreach known-urchins [if get-id-struct ? = id [report ?]]
+end
+
+to-report get-bubble-struct [id]
+  foreach known-bubbles [if get-id-struct ? = id [report ?]]
 end
 
 to-report get-xcor-struct [s]
@@ -407,12 +447,30 @@ end
 
 to attack-gambozino
   let g min-one-of (gambozinos in-cone harpon-distance max-angle) [distance myself]
-  attack g
+  if g != nobody[
+    if harpon-hit?
+    [
+      let id 0
+      ask g [set id who die]
+      remove-known-gambozinos id
+      caught-animal
+
+    ]
+  ]
 end
 
 to attack-urchin
   let u min-one-of (urchins in-cone harpon-distance max-angle) [distance myself]
-  attack u
+  if u != nobody[
+    if harpon-hit?
+    [
+      let id 0
+      ask u [set id who die]
+      remove-known-urchins id
+      caught-animal
+
+    ]
+  ]
 end
 
 to take-bubble
@@ -511,6 +569,7 @@ to divers-deliberative-BDI-loop
     set desire BDI-options
     set intention BDI-filter
     set plan build-plan-for-intention intention
+    print plan
     ;; If it could not build a plan, the robot should behave as a reactive agent
     if(empty-plan? plan)
       [divers-reactive-loop ]
@@ -668,7 +727,7 @@ to-report intention-succeeded? [iintention]
    [ifelse(ddesire = "run-from-urchins")
     [ report not close-to-urchin?]
     [if(ddesire = "caught-gambozinos")
-      [ report get-intention-agent iintention = nobody]
+      [ report get-intention-agent iintention = nobody] ;;FIXME
     ]
   ]
 end
@@ -720,8 +779,15 @@ to-report BDI-filter
   ifelse desire = "caught-oxygen"
   [
     set objective min-one-of visible-bubbles [distance myself]
-    if objective = nobody [set objective min-one-of known-bubbles [distance myself]]
-    if objective = nobody [report build-empty-intention]
+    ;;if objective = nobody [set objective min-one-of known-bubbles [distance myself]]
+    ;;if objective = nobody [report build-empty-intention]
+    ifelse objective = nobody[
+      if empty? known-bubbles [report build-empty-intention]
+      set objective one-of known-bubbles
+    ]
+    [let id 0
+          ask objective [set id who]
+          set objective get-bubble-struct id]
 
     report build-intention desire objective
   ]
@@ -729,9 +795,16 @@ to-report BDI-filter
     ifelse desire = "run-from-urchins"
     [
       set objective min-one-of visible-urchins [distance myself]
-      if objective = nobody [set objective min-one-of known-urchins [distance myself]]
-      ;;if objective = nobody [set objective min-one-of urchins [distance myself]]
-      if objective = nobody [report build-empty-intention]
+      ;;if objective = nobody [set objective min-one-of known-urchins [distance myself]]
+      ;;if objective = nobody [report build-empty-intention]
+      ifelse objective = nobody[
+        if empty? known-bubbles [report build-empty-intention]
+        set objective one-of known-bubbles
+      ]
+      [let id 0
+          ask objective [set id who]
+          set objective get-urchin-struct id]
+
       report build-intention desire objective
     ]
     [
@@ -739,8 +812,14 @@ to-report BDI-filter
       [
         set objective min-one-of visible-gambozinos [distance myself]
         ;;if objective = nobody [set objective min-one-of known-gambozinos [distance myself]]
-        if empty? known-gambozinos [report build-empty-intention]
-        set objective one-of known-gambozinos
+        ifelse objective = nobody[
+          if empty? known-gambozinos [report build-empty-intention]
+          set objective one-of known-gambozinos
+        ]
+        [ let id 0
+          ask objective [set id who]
+          set objective get-gambozino-struct id]
+
 
         report build-intention desire objective
       ]
@@ -755,9 +834,8 @@ to-report get-adj-cors [a]
 end
 
 to-report get-far-cors [a]
-  let x 0
-  let y 0
-  ask a [set x xcor set y ycor]
+  let x get-xcor-struct a
+  let y get-ycor-struct a
 
   let xdist x - xcor
   let ydist y - ycor
@@ -781,19 +859,19 @@ to-report build-plan-for-intention [iintention]
     ifelse get-intention-desire iintention = "run-from-urchins"
     [
       set new-plan build-path-plan (list xcor ycor) get-far-cors aagent
-      set new-plan add-instruction-to-plan new-plan build-instruction-run-from-urchins
+      set new-plan add-instruction-to-plan new-plan build-instruction-run-from-urchins get-id-struct aagent
     ]
     [
       set new-plan build-path-plan (list xcor ycor) get-adj-cors aagent
 
       if get-intention-desire iintention = "caught-oxygen"
       [
-        set new-plan add-instruction-to-plan new-plan build-instruction-caught-oxygen
+        set new-plan add-instruction-to-plan new-plan build-instruction-caught-oxygen get-id-struct aagent
       ]
 
       if get-intention-desire iintention = "caught-gambozinos"
       [
-        set new-plan add-instruction-to-plan new-plan build-instruction-caught-gambozinos
+        set new-plan add-instruction-to-plan new-plan build-instruction-caught-gambozinos get-id-struct aagent
       ]
     ]
   ]
@@ -852,16 +930,16 @@ to-report build-instruction-find-heading [hheading]
   report build-instruction "h" hheading
 end
 
-to-report build-instruction-caught-oxygen []
-  report build-instruction "co" ""
+to-report build-instruction-caught-oxygen [id]
+  report build-instruction "co" id
 end
 
-to-report build-instruction-run-from-urchins []
-  report build-instruction "rfu" ""
+to-report build-instruction-run-from-urchins [id]
+  report build-instruction "rfu" id
 end
 
-to-report build-instruction-caught-gambozinos []
-  report build-instruction "cg" ""
+to-report build-instruction-caught-gambozinos [id]
+  report build-instruction "cg" id
 end
 
 to-report instruction-find-adjacent-position? [iinstruction]
@@ -1111,7 +1189,7 @@ INPUTBOX
 798
 79
 num-divers
-10
+1
 1
 0
 Number
@@ -1213,7 +1291,7 @@ INPUTBOX
 87
 276
 max-distance
-2
+4
 1
 0
 Number
