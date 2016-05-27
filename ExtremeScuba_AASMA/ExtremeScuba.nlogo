@@ -374,20 +374,29 @@ to-report close-to-bubble?
   report any? (bubbles in-cone harpon-distance max-angle)
 end
 
+to-report close-to-bubble-id? [id]
+  report any? (bubbles in-cone harpon-distance max-angle) with [id = who]
+end
+
 to-report can-attack? [a]
-  if distance a < harpon-distance [report true]
-  report false
+  report distance a < harpon-distance
 end
 
 to-report can-attack-gambozinos?
-  ifelse any? (gambozinos in-cone harpon-distance max-angle) [report true]
-  [report false]
+  report any? (gambozinos in-cone harpon-distance max-angle)
+end
+
+to-report can-attack-gambozinos-id? [id]
+  report any? (gambozinos in-cone harpon-distance max-angle) with [id = who]
 end
 
 to-report can-attack-urchins?
   report false
-  ifelse any? (urchins in-cone harpon-distance max-angle) [report true]
-  [report false]
+  report any? (urchins in-cone harpon-distance max-angle)
+end
+
+to-report can-attack-urchins-id? [id]
+  report any? (urchins in-cone harpon-distance max-angle) with [id = who]
 end
 
 to-report harpon-hit?
@@ -475,6 +484,12 @@ end
 
 to take-bubble
   let bubble min-one-of (bubbles in-cone harpon-distance max-angle) [distance myself]
+  set oxygen 100
+  ask bubble [die]
+end
+
+to take-bubble-id [id]
+  let bubble one-of (bubbles in-cone harpon-distance max-angle) with [id = who]
   set oxygen 100
   ask bubble [die]
 end
@@ -597,7 +612,10 @@ to execute-plan-action
 
   ifelse(instruction-caught-oxygen? currentInstruction)
   [
-    if close-to-bubble? [take-bubble]
+    let id item 1 currentInstruction
+    ifelse close-to-bubble-id? id [take-bubble-id id]
+    [;;FICAR CHATEADO!!!
+      remove-known-bubbles id]
     set plan remove-plan-first-instruction plan
   ]
   [ ifelse(instruction-caught-gambozinos? currentInstruction)
@@ -1268,7 +1286,7 @@ CHOOSER
 architecture
 architecture
 "reactive" "deliberative BDI" "BDI w/ emotions"
-0
+1
 
 INPUTBOX
 90
