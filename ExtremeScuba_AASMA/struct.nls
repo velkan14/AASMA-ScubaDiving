@@ -108,6 +108,11 @@ to remove-known-bubbles [id]
   set known-bubbles remove struct known-bubbles
 end
 
+to-report get-struct [id llist]
+  foreach llist [if get-id-struct ? = id [report ?]]
+  report (list)
+end
+
 to-report get-gambozino-struct [id]
   foreach known-gambozinos [if get-id-struct ? = id [report ?]]
   report nobody
@@ -148,4 +153,55 @@ to-report add-new-struct [llist agent diver-id]
     report replace-item p llist struct
     ]
   report lput struct llist
+end
+
+to-report add-to-struct [mylist llist]
+  let id get-id-struct llist
+  if exists-id? mylist id [
+    let p 0
+    foreach mylist [if get-id-struct ? = id [set p (position ? mylist)]]
+    
+    let struct get-struct id mylist
+    set struct set-xcor-struct struct get-xcor-struct llist
+    set struct set-ycor-struct struct get-ycor-struct llist
+    set struct set-diver-id-struct struct get-diver-id-struct llist
+    report replace-item p mylist struct
+    ]
+  report lput llist mylist
+end
+
+to-report remove-to-struct [llist id]
+  if exists-id? llist id [
+    let p 0
+    foreach llist [if get-id-struct ? = id [set p (position ? llist)]]
+    report remove-item p llist
+    ]
+  report llist
+end
+
+to-report add-love [llist id]
+  if exists-id? llist id [
+    let p 0
+    foreach llist [if get-id-struct ? = id [set p (position ? llist)]]
+    
+    let struct get-struct id llist
+    set struct set-love-struct struct (get-love-struct struct + 0.1)
+    report replace-item p llist struct
+]
+  report llist
+end
+
+to-report is-love? [l]
+  if get-love-struct l > 0.5 [report true]
+  report false
+end
+
+to-report is-anger? [l]
+  if get-anger-struct l > 0.5 [report true]
+  report false
+end
+
+to-report is-fear? [l]
+  if get-fear-struct l > 0.5 [report true]
+  report false
 end

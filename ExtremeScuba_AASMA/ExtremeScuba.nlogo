@@ -206,34 +206,6 @@ to init-heading
         [set heading 360]]]]
 end
 
-to add-known-divers [ll]
-  foreach ll [
-    set known-divers lput ? known-divers
-  ]
-  set known-divers remove-duplicates known-divers
-end
-
-to add-known-bubbles [ll]
-  foreach ll [
-    set known-bubbles lput ? known-bubbles
-  ]
-  set known-bubbles remove-duplicates known-bubbles
-end
-
-to add-known-urchins [ll]
-  foreach ll [
-    set known-urchins lput ? known-urchins
-  ]
-  set known-urchins remove-duplicates known-urchins
-end
-
-to add-known-gambozinos [ll]
-  foreach ll [
-    set known-gambozinos lput ? known-gambozinos
-  ]
-  set known-gambozinos remove-duplicates known-gambozinos
-end
-
 to update-visible-divers
   let id who
   set visible-divers (divers in-cone max-distance max-angle) with [who != id]
@@ -344,10 +316,10 @@ to communicate
   let u known-urchins
   let b known-bubbles
   ask one-of (visible-divers) [
-    add-known-divers d
-    add-known-gambozinos g
-    add-known-urchins u
-    add-known-bubbles b
+    foreach d [set known-divers add-to-struct known-divers ? ]
+    foreach g [set known-gambozinos add-to-struct known-gambozinos ?]
+    foreach u [set known-urchins add-to-struct known-urchins ?]
+    foreach b [set known-bubbles add-to-struct known-bubbles ?]
    ]
 end
 
@@ -447,7 +419,8 @@ to divers-loop
   update-visible-gambozinos
   update-visible-urchins
   update-known
-
+  if close-to-diver? [communicate]
+  print known-bubbles
   ifelse architecture = "reactive" [divers-reactive-loop]
   [if architecture = "deliberative BDI"[divers-deliberative-BDI-loop]]
 
@@ -485,7 +458,7 @@ to divers-deliberative-BDI-loop
     set desire BDI-options
     set intention BDI-filter
     set plan build-plan-for-intention intention
-    print plan
+    ;;print plan
     ;; If it could not build a plan, the robot should behave as a reactive agent
     if(empty-plan? plan)
       [divers-reactive-loop ]
@@ -1084,7 +1057,7 @@ INPUTBOX
 798
 79
 num-divers
-5
+2
 1
 0
 Number
@@ -1152,7 +1125,7 @@ CHOOSER
 architecture
 architecture
 "reactive" "deliberative BDI" "BDI w/ emotions"
-0
+1
 
 INPUTBOX
 90
@@ -1267,7 +1240,7 @@ probability-of-new-bubble
 probability-of-new-bubble
 0
 1
-0.1
+0
 0.1
 1
 NIL
