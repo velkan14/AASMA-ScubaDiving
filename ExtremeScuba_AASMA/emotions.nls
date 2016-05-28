@@ -54,7 +54,7 @@ to update-emotions-about-information
   set love decrease-emotion love 0.01
   if not is-low-oxygen? [set  fear decrease-emotion fear 0.01]
   set happiness decrease-emotion happiness 0.01
-  set sadness increase-emotion sadness 0.02
+  set sadness increase-emotion sadness 0.005
 end
 
 to update-beliefs-considering-emotions

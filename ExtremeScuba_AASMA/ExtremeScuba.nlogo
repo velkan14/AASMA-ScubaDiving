@@ -253,6 +253,17 @@ to update-known
 end
 ;;DIVER SENSORES
 
+to-report get-label-emotion
+  let currentNumber 0
+  let currentLabel ""
+  if love > currentNumber [set currentNumber love set currentLabel "Love"]
+
+  if anger > currentNumber [set currentNumber anger set currentLabel "Anger"]
+  if fear > currentNumber [set currentNumber fear set currentLabel "Fear"]
+  if happiness > currentNumber [set currentNumber happiness set currentLabel "Happy"]
+  if sadness > currentNumber [set currentNumber sadness set currentLabel "Sad"]
+  report currentLabel
+end
 ;;FIXME: verificar estes closes
 to-report close-to-diver?
   report any? visible-divers
@@ -485,7 +496,8 @@ end
 to divers-loop
   set oxygen oxygen - oxygen-decay
   if oxygen < 40 [set fear increase-emotion fear 0.1]
-  set label (word "HP:" health "; O2:" oxygen "; Caught:" gambozinos-caught)
+
+  set label (word "HP:" health "; O2:" oxygen "; Caught:" gambozinos-caught " Emotion: " get-label-emotion)
 
   if is-oxygen-zero? [die]
   if is-health-zero? [die]
