@@ -377,7 +377,10 @@ to attack-urchin [id]
       ask u [set id who die]
       remove-known-urchins id
       caught-animal
-
+      if get-id-struct feared = id
+      [set feared (list)]
+      if get-id-struct angered = id
+      [set angered (list) set anger 0]
     ]
   ]
 end
@@ -425,6 +428,8 @@ to attack-diver
   ask diver [
     set health health - 5
     set fear increase-emotion fear 0.5
+    set anger increase-emotion anger 0.5
+    set angered get-urchin-struct id
     set feared get-urchin-struct id
     ]
 end
@@ -1152,7 +1157,7 @@ INPUTBOX
 581
 79
 num-bubbles
-20
+0
 1
 0
 Number
@@ -1163,7 +1168,7 @@ INPUTBOX
 798
 79
 num-divers
-5
+1
 1
 0
 Number
@@ -1174,7 +1179,7 @@ INPUTBOX
 684
 79
 num-urchins
-10
+40
 1
 0
 Number
@@ -1185,7 +1190,7 @@ INPUTBOX
 483
 80
 num-gambozinos
-40
+0
 1
 0
 Number
@@ -1231,7 +1236,7 @@ CHOOSER
 architecture
 architecture
 "reactive" "deliberative BDI" "BDI w/ emotions"
-1
+2
 
 INPUTBOX
 90

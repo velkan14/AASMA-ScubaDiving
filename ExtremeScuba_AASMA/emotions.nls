@@ -105,7 +105,7 @@ to-report BDI-options-considering-emotions
       ]
     ]
   ]
-  report ""
+  report "caught-gambozinos"
 end
 
 to-report is-fear? 
