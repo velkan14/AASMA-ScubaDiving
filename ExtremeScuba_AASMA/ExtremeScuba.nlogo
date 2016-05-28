@@ -41,6 +41,10 @@ divers-own [
   got;;
   actions-box;;
 
+  ;; 0 if no message was received
+  ;;1 otherwise
+  received-message
+
   agent-architecture
 
   visible-bubbles ;;FIXME: Deveria ser uma lista e não um agent-set
@@ -161,6 +165,8 @@ to init-divers [ num ]
 
     set got (list)
     set actions-box (list)
+
+    set received-message 0
 
     set incoming-qeue (list)
     set hit-by (list)
@@ -314,6 +320,10 @@ to-report patch-ahead-clear?
   report result
 end
 
+to-report has-received-message
+  report received-message = 1
+end
+
 ;;DIVER ACTUATORS
 
 to communicate
@@ -322,6 +332,7 @@ to communicate
   let u known-urchins
   let b known-bubbles
   ask one-of (visible-divers) [
+    set received-message 1
     foreach d [set known-divers add-to-struct known-divers ? ]
     foreach g [set known-gambozinos add-to-struct known-gambozinos ?]
     foreach u [set known-urchins add-to-struct known-urchins ?]
@@ -424,8 +435,13 @@ to divers-loop
   update-visible-bubbles
   update-visible-gambozinos
   update-visible-urchins
-  update-known
-  if close-to-diver? [communicate]
+
+  if has-received-message
+    [
+      update-known
+      set received-message 0
+    ]
+
   print known-bubbles
   ifelse architecture = "reactive" [divers-reactive-loop]
   [if architecture = "deliberative BDI"[divers-deliberative-BDI-loop]]
@@ -442,9 +458,11 @@ to divers-reactive-loop
     [
       ifelse can-attack-gambozinos? [attack-gambozino]
       [
-        ifelse patch-ahead-clear? and random-float 1 < 0.8 [ move]
-        [rotate-random]
-        ]]]
+        ifelse close-to-diver? [communicate]
+        [
+          ifelse patch-ahead-clear? and random-float 1 < 0.8 [ move]
+          [rotate-random]
+        ]]]]
 end
 
 
@@ -1131,7 +1149,7 @@ CHOOSER
 architecture
 architecture
 "reactive" "deliberative BDI" "BDI w/ emotions"
-1
+0
 
 INPUTBOX
 90
