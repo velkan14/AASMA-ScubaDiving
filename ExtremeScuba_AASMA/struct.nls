@@ -134,7 +134,17 @@ to-report add-new-struct [llist agent diver-id]
   let struct new-struct agent diver-id
   ask agent [set id who]
   if exists-id? llist id [
+    
     foreach llist [if get-id-struct ? = id [set p (position ? llist)]]
+    let x 0
+    let y 0
+    let t 0
+    ask agent [
+      set x xcor
+      set y ycor
+      set t my-type
+    ]
+    set struct (list x y t id diver-id get-love-struct struct get-anger-struct struct get-fear-struct struct get-sadness-struct struct get-happiness-struct struct)
     report replace-item p llist struct
     ]
   report lput struct llist
