@@ -236,126 +236,42 @@ end
 
 to update-visible-divers
   let id who
-  let l known-divers
-
   set visible-divers (divers in-cone max-distance max-angle) with [who != id]
-
-  ask visible-divers [set l lput new-struct self id l]
-  set known-divers l
 end
 
 to update-visible-bubbles
-  let l known-bubbles
   let id who
-
   set visible-bubbles (bubbles in-cone max-distance max-angle)
-
-  ask visible-bubbles [set l lput new-struct self id l]
-  set known-bubbles l
 end
 
 to update-visible-urchins
-  let l known-urchins
   let id who
-
   set visible-urchins (urchins in-cone max-distance max-angle)
-
-  ask visible-urchins [set l lput new-struct self id l]
-  set known-urchins l
 end
 
 to update-visible-gambozinos
-  let l known-gambozinos
   let id who
-
   set visible-gambozinos (gambozinos in-cone max-distance max-angle)
-
-  ask visible-gambozinos [set l lput new-struct self id l]
-  set known-gambozinos l
 end
 
+to update-known
+  let id who
+  let u known-urchins
+  ask visible-urchins [set u add-new-struct u self id]
+  set known-urchins u
 
-to-report new-struct[aagent diver-id]
-  let x 0
-  let y 0
-  let t 0
-  let id 0
-  ask aagent [
-    set x xcor
-    set y ycor
-    set t my-type
-    set id who
-  ]
-  report (list x y t id diver-id 0 0 0 0 0)
+  let d known-divers
+  ask visible-divers [set d add-new-struct d self id]
+  set known-divers d
+
+  let g known-gambozinos
+  ask visible-gambozinos [set g add-new-struct g self id]
+  set known-gambozinos g
+
+  let b known-bubbles
+  ask visible-bubbles [set b add-new-struct b self id]
+  set known-bubbles b
 end
-
-to remove-known-gambozinos [id]
-  let struct get-gambozino-struct id
-  set known-gambozinos remove struct known-gambozinos
-end
-
-to remove-known-urchins [id]
-  let struct get-urchin-struct id
-  set known-urchins remove struct known-urchins
-end
-
-to remove-known-bubbles [id]
-  let struct get-bubble-struct id
-  set known-bubbles remove struct known-bubbles
-end
-
-to-report get-gambozino-struct [id]
-  foreach known-gambozinos [if get-id-struct ? = id [report ?]]
-end
-
-to-report get-urchin-struct [id]
-  foreach known-urchins [if get-id-struct ? = id [report ?]]
-end
-
-to-report get-bubble-struct [id]
-  foreach known-bubbles [if get-id-struct ? = id [report ?]]
-end
-
-to-report get-xcor-struct [s]
-  report item 0 s
-end
-
-to-report get-ycor-struct [s]
-  report item 1 s
-end
-
-to-report get-type-struct [s]
-  report item 2 s
-end
-
-to-report get-id-struct [s]
-  report item 3 s
-end
-
-to-report get-diver-id-struct [s]
-  report item 4 s
-end
-
-to-report get-love-struct [s]
-  report item 5 s
-end
-
-to-report get-anger-struct [s]
-  report item 6 s
-end
-
-to-report get-fear-struct [s]
-  report item 7 s
-end
-
-to-report get-sadness-struct [s]
-  report item 8 s
-end
-
-to-report get-happiness-struct [s]
-  report item 9 s
-end
-
 ;;DIVER SENSORES
 
 ;;FIXME: verificar estes closes
@@ -530,6 +446,7 @@ to divers-loop
   update-visible-bubbles
   update-visible-gambozinos
   update-visible-urchins
+  update-known
 
   ifelse architecture = "reactive" [divers-reactive-loop]
   [if architecture = "deliberative BDI"[divers-deliberative-BDI-loop]]
@@ -1084,31 +1001,10 @@ end
 ;;;  EMOTIONS -------------------------------------------------------
 ;;;
 
-to divers-deliberative-BDI-emotions-loop
-    ;;if goal-succeeded?
-    ;;[stop]
-
-  set last-action ""
-  ifelse not (empty-plan? plan or intention-succeeded? intention or impossible-intention? intention)
-  [
-    execute-plan-action
-    update-beliefs
-    if random-float 1 < 0.1 [
-      set desire BDI-options
-      set intention BDI-filter
-    ]
+__includes[
+  "emotions.nls"
+  "struct.nls"
   ]
-  [
-    update-beliefs
-    ;; Check the robot's options
-    set desire BDI-options
-    set intention BDI-filter
-    set plan build-plan-for-intention intention
-    ;; If it could not build a plan, the robot should behave as a reactive agent
-    if(empty-plan? plan)
-      [divers-reactive-loop ]
-  ]
-end
 @#$#@#$#@
 GRAPHICS-WINDOW
 349
