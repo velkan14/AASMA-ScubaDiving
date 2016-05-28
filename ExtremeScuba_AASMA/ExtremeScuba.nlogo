@@ -329,7 +329,7 @@ to communicate
   ask one-of (visible-divers) [
     set received-message 1
     set message (list d g u b)
-   ]
+  ]
 end
 
 to read-message
@@ -367,7 +367,20 @@ to attack-gambozino
   ]
 end
 
-to attack-urchin
+to attack-urchin [id]
+  let u one-of (urchins in-cone harpon-distance max-angle) with [id = who]
+  if u != nobody[
+    if harpon-hit?
+    [
+      ask u [set id who die]
+      remove-known-urchins id
+      caught-animal
+
+    ]
+  ]
+end
+
+to attack-urchins
   let u min-one-of (urchins in-cone harpon-distance max-angle) [distance myself]
   if u != nobody[
     if harpon-hit?
@@ -417,18 +430,34 @@ end
 
 to move
   ifelse rest = max-speed
-     [
-       fd 1
-       set rest 0
-     ][
-       set rest rest + 1
-     ]
+    [
+      fd 1
+      set rest 0
+    ][
+  set rest rest + 1
+    ]
+end
+
+to share [id]
+  let diver one-of (divers in-cone urchin-distance 360) with [id = who]
+  if diver != nobody
+  [
+    let o 0
+    let g 0
+    ask diver [set o oxygen set g gambozinos-caught]
+    ifelse o < oxygen
+    [print word "share oxygen with " id]
+    [if g < gambozinos-caught [
+        print word "share gambozinos with " id
+        ]]
+    ]
+
 end
 
 ;; LOOPS
 
 to divers-loop
-    set oxygen oxygen - oxygen-decay
+  set oxygen oxygen - oxygen-decay
   set label (word "HP:" health "; O2:" oxygen "; Caught:" gambozinos-caught)
 
   if is-oxygen-zero? [die]
@@ -447,7 +476,9 @@ to divers-loop
 
   print known-bubbles
   ifelse architecture = "reactive" [divers-reactive-loop]
-  [if architecture = "deliberative BDI"[divers-deliberative-BDI-loop]]
+  [ifelse architecture = "deliberative BDI"[divers-deliberative-BDI-loop]
+    [if architecture = "BDI w/ emotions"
+      [divers-deliberative-BDI-emotions-loop]]]
 
   ask (patches in-cone max-distance max-angle) [set pcolor blue]
   ask (patches in-cone harpon-distance max-angle) [set pcolor yellow]
@@ -457,7 +488,7 @@ to divers-reactive-loop
 
   ifelse close-to-bubble? and is-low-oxygen? [take-bubble]
   [
-    ifelse can-attack-urchins? [attack-urchin]
+    ifelse can-attack-urchins? [attack-urchins]
     [
       ifelse can-attack-gambozinos? [attack-gambozino]
       [
@@ -471,7 +502,7 @@ end
 
 to divers-deliberative-BDI-loop
   ;;if goal-succeeded?
-    ;;[stop]
+  ;;[stop]
 
   set last-action ""
   ifelse not (empty-plan? plan or intention-succeeded? intention or impossible-intention? intention)
@@ -512,22 +543,34 @@ to execute-plan-action
     ]
     [ ifelse(instruction-run-from-urchins? currentInstruction)
       [
-        attack-urchin
+        attack-urchins
         set plan remove-plan-first-instruction plan
       ]
-      [ if(instruction-find-adjacent-position? currentInstruction)
-      [
-        let x 0
-        let y 0
-        ask patch-ahead 1 [set x pxcor set y pycor]
-        let p (list x y)
-        ifelse(p = get-instruction-value currentInstruction)
+      [ ifelse (instruction-attack-urchin? currentInstruction)
         [
-          ifelse patch-ahead-clear? [move
-            set plan remove-plan-first-instruction plan]
-        [ rt -90 ]
-        ] [ rt 90 ]
-      ]
+          attack-urchin item 1 currentInstruction
+          set plan remove-plan-first-instruction plan
+        ]
+        [ifelse(instruction-help? currentInstruction)
+          [
+            let id item 1 currentInstruction
+            share id
+            ];;share de oxigenio ou gambozinos
+          [if(instruction-find-adjacent-position? currentInstruction)
+            [
+              let x 0
+              let y 0
+              ask patch-ahead 1 [set x pxcor set y pycor]
+              let p (list x y)
+              ifelse(p = get-instruction-value currentInstruction)
+              [
+                ifelse patch-ahead-clear? [move
+                  set plan remove-plan-first-instruction plan]
+                [ rt -90 ]
+              ] [ rt 90 ]
+            ]
+          ]
+        ]
       ]
     ]
   ]
@@ -538,8 +581,8 @@ end
 ;;;
 to-report goal-succeeded?
   report false ;;( equal-positions? current-position build-position 0 0
-          ;;and (heading = 90)
-          ;;and (boxes-on-shelves = NUM_BOXES) )
+               ;;and (heading = 90)
+               ;;and (boxes-on-shelves = NUM_BOXES) )
 end
 
 
@@ -548,7 +591,7 @@ end
 
 to gambozinos-loop
   ifelse patch-ahead-clear? and random-float 1 < .8 [move]
-                            [rotate-random]
+    [rotate-random]
 end
 
 to urchins-loop
@@ -556,8 +599,8 @@ to urchins-loop
   [
 
     ifelse patch-ahead-clear? and random-float 1 < .8 [move]
-                              [rotate-random]
-    ]
+      [rotate-random]
+  ]
   ask (patches in-cone urchin-distance max-angle) [set pcolor pink]
 
 
@@ -640,12 +683,12 @@ to-report intention-succeeded? [iintention]
 
   set ddesire get-intention-desire iintention
   ifelse(ddesire = "caught-oxygen")[ report oxygen = 100 ]
-   [ifelse(ddesire = "run-from-urchins")
-    [ report not close-to-urchin?]
-    [if(ddesire = "caught-gambozinos")
-      [ report get-intention-agent iintention = nobody] ;;FIXME
+    [ifelse(ddesire = "run-from-urchins")
+      [ report not close-to-urchin?]
+      [if(ddesire = "caught-gambozinos")
+        [ report get-intention-agent iintention = nobody] ;;FIXME
+      ]
     ]
-  ]
 end
 
 ;;;
@@ -703,8 +746,8 @@ to-report BDI-filter
       set objective one-of known-bubbles
     ]
     [let id 0
-          ask objective [set id who]
-          set objective get-bubble-struct id]
+      ask objective [set id who]
+      set objective get-bubble-struct id]
 
     report build-intention desire objective
   ]
@@ -719,8 +762,8 @@ to-report BDI-filter
         set objective one-of known-urchins
       ]
       [let id 0
-          ask objective [set id who]
-          set objective get-urchin-struct id]
+        ask objective [set id who]
+        set objective get-urchin-struct id]
 
       report build-intention desire objective
     ]
@@ -790,6 +833,14 @@ to-report build-plan-for-intention [iintention]
       [
         set new-plan add-instruction-to-plan new-plan build-instruction-caught-gambozinos get-id-struct aagent
       ]
+      if get-intention-desire iintention = "attack"
+      [
+        set new-plan add-instruction-to-plan new-plan build-instruction-attack-urchin get-id-struct aagent
+      ]
+      if get-intention-desire iintention = "help"
+      [
+        set new-plan add-instruction-to-plan new-plan build-instruction-help get-id-struct aagent
+      ]
     ]
   ]
 
@@ -857,6 +908,22 @@ end
 
 to-report build-instruction-caught-gambozinos [id]
   report build-instruction "cg" id
+end
+
+to-report build-instruction-attack-urchin [id]
+  report build-instruction "au" id
+end
+
+to-report build-instruction-help [id]
+  report build-instruction "h" id
+end
+
+to-report instruction-help? [iinstruction]
+  report get-instruction-type iinstruction = "h"
+end
+
+to-report instruction-attack-urchin? [iinstruction]
+  report get-instruction-type iinstruction = "au"
 end
 
 to-report instruction-find-adjacent-position? [iinstruction]
@@ -954,14 +1021,14 @@ to-report adjacents [node mobjectivo]
   set aux2 []
   set aux adjacent-positions-of-type (last first node)
   foreach aux [ set aux2 fput (list 0
-                                  ((item 1 first node) + 1)
-                                   ?)
-                             aux2 ]
+    ((item 1 first node) + 1)
+      ?)
+  aux2 ]
   set aux []
   foreach aux2
   [ set aux fput (list (replace-item 0 ? (heuristic ? mobjectivo))
-                       first node)
-                 aux ]
+    first node)
+  aux ]
   report aux
 end
 
@@ -995,7 +1062,7 @@ to-report heuristic [node mgoal]
   set y first butfirst item 2 node
 
   report cost +
-         2 * (abs(x - item 0 mgoal) +  abs(y - item 1 mgoal))
+  2 * (abs(x - item 0 mgoal) +  abs(y - item 1 mgoal))
 end
 
 ;;;
@@ -1005,7 +1072,7 @@ end
 __includes[
   "emotions.nls"
   "struct.nls"
-  ]
+]
 @#$#@#$#@
 GRAPHICS-WINDOW
 349
@@ -1153,7 +1220,7 @@ CHOOSER
 architecture
 architecture
 "reactive" "deliberative BDI" "BDI w/ emotions"
-1
+2
 
 INPUTBOX
 90

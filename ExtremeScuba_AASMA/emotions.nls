@@ -1,7 +1,7 @@
 to divers-deliberative-BDI-emotions-loop
-    ;;if goal-succeeded?
-    ;;[stop]
-
+  ;;if goal-succeeded?
+  ;;[stop]
+  
   set last-action ""
   ifelse not (empty-plan? plan or intention-succeeded? intention or impossible-intention? intention)
   [
@@ -22,7 +22,7 @@ to divers-deliberative-BDI-emotions-loop
     update-emotions-about-information
     ;; If it could not build a plan, the robot should behave as a reactive agent
     if(empty-plan? plan)
-      [divers-reactive-loop ]
+      [divers-reactive-loop]
   ]
 end
 
@@ -55,28 +55,28 @@ to-report BDI-filter-considering-emotions
   [ifelse desire = "run-from-urchins"
     [
       set objective feared
-
+      
       report build-intention desire objective
-     ];;run from feared
+    ];;run from feared
     [if-else desire = "attack"
       [
         set objective feared
-
+        
         report build-intention desire objective
       ];;attack feared
       [if-else desire = "help"
         [
           set objective loved
-
+          
           report build-intention desire objective
         ];;haha
         [if desire = "caught-gambozino"
           [
-          if empty? known-gambozinos [report build-empty-intention]
-          set objective one-of known-gambozinos
-          report build-intention desire objective
+            if empty? known-gambozinos [report build-empty-intention]
+            set objective one-of known-gambozinos
+            report build-intention desire objective
           ]
-    ]]]]
+        ]]]]
   report build-empty-intention
 end
 

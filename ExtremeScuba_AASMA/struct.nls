@@ -79,7 +79,7 @@ to-report get-gambozino-struct [id]
   foreach known-gambozinos [if get-id-struct ? = id [report ?]]
   report nobody
 end
- 
+
 to-report get-urchin-struct [id]
   foreach known-urchins [if get-id-struct ? = id [report ?]]
   report nobody
@@ -113,7 +113,7 @@ to-report add-new-struct [llist agent diver-id]
     ]
     set struct (list x y t id diver-id)
     report replace-item p llist struct
-    ]
+  ]
   report lput struct llist
 end
 
@@ -128,7 +128,7 @@ to-report add-to-struct [mylist llist]
     set struct set-ycor-struct struct get-ycor-struct llist
     set struct set-diver-id-struct struct get-diver-id-struct llist
     report replace-item p mylist struct
-    ]
+  ]
   report lput llist mylist
 end
 
@@ -137,6 +137,6 @@ to-report remove-to-struct [llist id]
     let p 0
     foreach llist [if get-id-struct ? = id [set p (position ? llist)]]
     report remove-item p llist
-    ]
+  ]
   report llist
 end
