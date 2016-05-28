@@ -1,0 +1,43 @@
+to divers-deliberative-BDI-emotions-loop
+    ;;if goal-succeeded?
+    ;;[stop]
+
+  set last-action ""
+  ifelse not (empty-plan? plan or intention-succeeded? intention or impossible-intention? intention)
+  [
+    execute-plan-action
+    update-beliefs
+    if random-float 1 < 0.1 [
+      set desire BDI-options
+      set intention BDI-filter
+    ]
+  ]
+  [
+    update-beliefs-candidates
+    update-emotions-about-information
+    ;; Check the robot's options
+    set desire BDI-options
+    set intention BDI-filter-considering-emotions
+    set plan build-plan-for-intention intention
+    update-emotions-about-information
+    ;; If it could not build a plan, the robot should behave as a reactive agent
+    if(empty-plan? plan)
+      [divers-reactive-loop ]
+  ]
+end
+
+to update-beliefs-candidates
+  update-visible-divers
+  update-visible-bubbles
+  update-visible-gambozinos
+  update-visible-urchins
+end
+
+to update-emotions-about-information
+end
+
+to update-beliefs-considering-emotions
+end
+
+to-report BDI-filter-considering-emotions
+end

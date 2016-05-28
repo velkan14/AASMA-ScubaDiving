@@ -1,0 +1,141 @@
+
+to-report new-struct[aagent diver-id]
+  let x 0
+  let y 0
+  let t 0
+  let id 0
+  ask aagent [
+    set x xcor
+    set y ycor
+    set t my-type
+    set id who
+  ]
+  report (list x y t id diver-id 0 0 0 0 0)
+end
+
+to-report get-xcor-struct [s]
+  report item 0 s
+end
+
+to-report get-ycor-struct [s]
+  report item 1 s
+end
+
+to-report get-type-struct [s]
+  report item 2 s
+end
+
+to-report get-id-struct [s]
+  report item 3 s
+end
+
+to-report get-diver-id-struct [s]
+  report item 4 s
+end
+
+to-report get-love-struct [s]
+  report item 5 s
+end
+
+to-report get-anger-struct [s]
+  report item 6 s
+end
+
+to-report get-fear-struct [s]
+  report item 7 s
+end
+
+to-report get-sadness-struct [s]
+  report item 8 s
+end
+
+to-report get-happiness-struct [s]
+  report item 9 s
+end
+
+to-report set-xcor-struct [s x]
+  report replace-item 0 s x
+end
+
+to-report set-ycor-struct [s y]
+  report replace-item 1 s y
+end
+
+to-report set-type-struct [s t]
+  report replace-item 2 s t
+end
+
+to-report set-id-struct [s i]
+  report replace-item 3 s i
+end
+
+to-report set-diver-id-struct [s i]
+  report replace-item 4 s i
+end
+
+to-report set-love-struct [s l]
+  report replace-item 5 s l
+end
+
+to-report set-anger-struct [s a]
+  report replace-item 6 s a
+end
+
+to-report set-fear-struct [s f]
+  report replace-item 7 s f
+end
+
+to-report set-sadness-struct [s ss]
+  report replace-item 8 s ss
+end
+
+to-report set-happiness-struct [s h]
+  report replace-item 9 s h
+end
+
+to remove-known-gambozinos [id]
+  let struct get-gambozino-struct id
+  set known-gambozinos remove struct known-gambozinos
+end
+
+to remove-known-urchins [id]
+  let struct get-urchin-struct id
+  set known-urchins remove struct known-urchins
+end
+
+to remove-known-bubbles [id]
+  let struct get-bubble-struct id
+  set known-bubbles remove struct known-bubbles
+end
+
+to-report get-gambozino-struct [id]
+  foreach known-gambozinos [if get-id-struct ? = id [report ?]]
+  report nobody
+end
+
+to-report get-urchin-struct [id]
+  foreach known-urchins [if get-id-struct ? = id [report ?]]
+  report nobody
+end
+
+to-report get-bubble-struct [id]
+  foreach known-bubbles [if get-id-struct ? = id [report ?]]
+  report nobody
+end
+
+to-report exists-id? [llist id]
+  foreach llist [if get-id-struct ? = id [report true]]
+  report false
+end
+
+to-report add-new-struct [llist agent diver-id]
+  let id 0
+  let p 0
+  let struct new-struct agent diver-id
+  ask agent [set id who]
+  if exists-id? llist id [
+    foreach llist [if get-id-struct ? = id [set p (position ? llist)]]
+    report replace-item p llist struct
+    ]
+  report lput struct llist
+end
