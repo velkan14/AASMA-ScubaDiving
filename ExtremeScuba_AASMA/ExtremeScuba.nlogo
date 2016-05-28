@@ -38,9 +38,6 @@ divers-own [
   gambozinos-caught
   gambozinos-in-the-backpack
 
-  got;;
-  actions-box;;
-
   ;; 0 if no message was received
   ;;1 otherwise
   received-message
@@ -162,9 +159,6 @@ to init-divers [ num ]
     set oxygen 100
     set gambozinos-caught 0
     set gambozinos-in-the-backpack 0
-
-    set got (list)
-    set actions-box (list)
 
     set received-message 0
 
