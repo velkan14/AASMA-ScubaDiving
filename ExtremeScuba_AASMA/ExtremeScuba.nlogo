@@ -459,11 +459,24 @@ to share [id]
     let g 0
     ask diver [set o oxygen set g gambozinos-caught]
     ifelse o < oxygen
-    [print word "share oxygen with " id]
-    [if g < gambozinos-caught [
-        print word "share gambozinos with " id
-        ]]
+    [
+      print word "share oxygen with " id
+      let diference oxygen - o
+      set oxygen oxygen - diference / 2
+      ask diver [set love increase-emotion love 0.2 set oxygen oxygen + diference / 2]
     ]
+
+    [if g < gambozinos-caught [
+      print word "share gambozinos with " id
+      set gambozinos-caught gambozinos-caught - 1
+      ask diver [
+        set happiness increase-emotion happiness 0.4
+        set sadness decrease-emotion sadness 0.4
+        set love increase-emotion love 0.2
+        caught-animal
+      ]]]
+
+  ]
 
 end
 
@@ -717,9 +730,11 @@ end
 ;;;  However, in this scenario, the only intention that can become impossible is "grab", which is already tested in 'execute-plan-action'
 ;;;
 to-report impossible-intention? [iintention]
+  if not empty? iintention[
   let ddesire get-intention-desire iintention
   if ddesire = "caught-gambozinos" and is-low-oxygen? [report true]
   if ddesire = "caught-gambozinos" and is-low-health? and any? (urchins in-cone harpon-distance 120) [report true]
+  ]
   report false
 end
 
