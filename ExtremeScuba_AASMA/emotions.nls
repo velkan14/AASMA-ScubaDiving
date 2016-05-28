@@ -8,8 +8,8 @@ to divers-deliberative-BDI-emotions-loop
     execute-plan-action
     update-beliefs
     if random-float 1 < 0.1 [
-      set desire BDI-options
-      set intention BDI-filter
+      set desire BDI-options-considering-emotions
+      set intention BDI-filter-considering-emotions
     ]
   ]
   [
@@ -21,6 +21,13 @@ to divers-deliberative-BDI-emotions-loop
     set plan build-plan-for-intention intention
     update-emotions-about-information
     ;; If it could not build a plan, the robot should behave as a reactive agent
+    print plan
+    print word "Fear: " fear
+    print word "Love: " love
+    print word "Anger: " anger
+    print word "Happy: " happiness
+    print word "Sad: " sadness
+    print known-gambozinos
     if(empty-plan? plan)
       [divers-reactive-loop]
   ]
@@ -35,6 +42,12 @@ to update-beliefs-candidates
 end
 
 to update-emotions-about-information
+  set anger decrease-emotion anger 0.05
+  set love decrease-emotion love 0.01
+  if not is-low-oxygen? [set  fear decrease-emotion fear 0.01]
+  set happiness decrease-emotion happiness 0.01
+  set sadness increase-emotion sadness 0.02
+  
   ;;foreach known-bubbles [let id get-id-struct ? if id != who [set known-divers add-love known-divers id]]
   ;;foreach known-gambozinos [let id get-id-struct ? if id != who [set known-divers add-love known-divers id]]
   ;;foreach known-urchins [let id get-id-struct ? if id != who [set known-divers add-love known-divers id]]
@@ -58,7 +71,7 @@ to-report BDI-filter-considering-emotions
       
       report build-intention desire objective
     ];;run from feared
-    [if-else desire = "attack"
+    [if-else desire = "attack-urchins"
       [
         set objective feared
         
@@ -70,7 +83,7 @@ to-report BDI-filter-considering-emotions
           
           report build-intention desire objective
         ];;haha
-        [if desire = "caught-gambozino"
+        [if desire = "caught-gambozinos"
           [
             if empty? known-gambozinos [report build-empty-intention]
             set objective one-of known-gambozinos
@@ -81,19 +94,18 @@ to-report BDI-filter-considering-emotions
 end
 
 to-report BDI-options-considering-emotions
-  
-  
   ifelse is-fear? and is-low-oxygen? [report "caught-oxygen"]
   [
     if-else is-fear? and not empty? feared [report "run-from-urchins"]
     [
       ifelse is-anger? and not empty? angered [report "attack-urchins"]
       [
-        ifelse is-love? and not empty? loved[report "help"]
-        [report "caught-gambozinos"]
+        ifelse is-love? and not empty? loved [report "help"]
+        [if is-sad? [report "caught-gambozinos"]]
       ]
     ]
   ]
+  report ""
 end
 
 to-report is-fear? 
@@ -106,4 +118,20 @@ end
 
 to-report is-anger? 
   report anger > 0.5
+end
+
+to-report is-sad? 
+  report sadness > 0.5
+end
+
+to-report increase-emotion [emotion number]
+  set emotion emotion + number
+  if emotion > 1 [report 1]
+  report emotion
+end
+
+to-report decrease-emotion [emotion number]
+  set emotion emotion - number
+  if emotion < 0 [report 0]
+  report emotion
 end

@@ -361,6 +361,8 @@ to attack-gambozino
       let id 0
       ask g [set id who die]
       remove-known-gambozinos id
+      set happiness increase-emotion happiness 0.4
+      set sadness decrease-emotion sadness 0.4
       caught-animal
 
     ]
@@ -398,6 +400,7 @@ to take-bubble
   let bubble min-one-of (bubbles in-cone harpon-distance max-angle) [distance myself]
   set oxygen 100
   ask bubble [die]
+  if empty? feared [set fear 0]
 end
 
 to caught-animal
@@ -417,8 +420,13 @@ end
 
 ;;URCHINS ACTUATORS
 to attack-diver
+  let id who
   let diver one-of (divers in-cone urchin-distance 360)
-  ask diver [set health health - 5]
+  ask diver [
+    set health health - 5
+    set fear increase-emotion fear 0.5
+    set feared get-urchin-struct id
+    ]
 end
 
 to rotate-random
@@ -458,6 +466,7 @@ end
 
 to divers-loop
   set oxygen oxygen - oxygen-decay
+  if oxygen < 40 [set fear increase-emotion fear 0.1]
   set label (word "HP:" health "; O2:" oxygen "; Caught:" gambozinos-caught)
 
   if is-oxygen-zero? [die]
@@ -473,8 +482,6 @@ to divers-loop
       read-message
       set received-message 0
     ]
-
-  print known-bubbles
   ifelse architecture = "reactive" [divers-reactive-loop]
   [ifelse architecture = "deliberative BDI"[divers-deliberative-BDI-loop]
     [if architecture = "BDI w/ emotions"
@@ -509,6 +516,10 @@ to divers-deliberative-BDI-loop
   [
     execute-plan-action
     update-beliefs
+    if random-float 1 < 0.1 [
+      set desire BDI-options
+      set intention BDI-filter
+    ]
   ]
   [
     update-beliefs
@@ -516,7 +527,7 @@ to divers-deliberative-BDI-loop
     set desire BDI-options
     set intention BDI-filter
     set plan build-plan-for-intention intention
-    ;;print plan
+    print plan
     ;; If it could not build a plan, the robot should behave as a reactive agent
     if(empty-plan? plan)
       [divers-reactive-loop ]
@@ -833,7 +844,7 @@ to-report build-plan-for-intention [iintention]
       [
         set new-plan add-instruction-to-plan new-plan build-instruction-caught-gambozinos get-id-struct aagent
       ]
-      if get-intention-desire iintention = "attack"
+      if get-intention-desire iintention = "attack-urchins"
       [
         set new-plan add-instruction-to-plan new-plan build-instruction-attack-urchin get-id-struct aagent
       ]
@@ -1152,7 +1163,7 @@ INPUTBOX
 798
 79
 num-divers
-10
+5
 1
 0
 Number
@@ -1163,7 +1174,7 @@ INPUTBOX
 684
 79
 num-urchins
-5
+10
 1
 0
 Number
@@ -1174,7 +1185,7 @@ INPUTBOX
 483
 80
 num-gambozinos
-10
+40
 1
 0
 Number
@@ -1220,7 +1231,7 @@ CHOOSER
 architecture
 architecture
 "reactive" "deliberative BDI" "BDI w/ emotions"
-2
+1
 
 INPUTBOX
 90
