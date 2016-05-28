@@ -41,6 +41,7 @@ divers-own [
   ;; 0 if no message was received
   ;;1 otherwise
   received-message
+  message
 
   agent-architecture
 
@@ -161,7 +162,7 @@ to init-divers [ num ]
     set gambozinos-in-the-backpack 0
 
     set received-message 0
-
+    set message (list)
     set incoming-qeue (list)
     set hit-by (list)
     set attacked-by (list)
@@ -327,11 +328,19 @@ to communicate
   let b known-bubbles
   ask one-of (visible-divers) [
     set received-message 1
-    foreach d [set known-divers add-to-struct known-divers ? ]
-    foreach g [set known-gambozinos add-to-struct known-gambozinos ?]
-    foreach u [set known-urchins add-to-struct known-urchins ?]
-    foreach b [set known-bubbles add-to-struct known-bubbles ?]
+    set message (list d g u b)
    ]
+end
+
+to read-message
+  let d item 0 message
+  let g item 1 message
+  let u item 2 message
+  let b item 3 message
+  foreach d [set known-divers add-to-struct known-divers ? ]
+  foreach g [set known-gambozinos add-to-struct known-gambozinos ?]
+  foreach u [set known-urchins add-to-struct known-urchins ?]
+  foreach b [set known-bubbles add-to-struct known-bubbles ?]
 end
 
 to attack [animal]
@@ -432,7 +441,7 @@ to divers-loop
 
   if has-received-message
     [
-      update-known
+      read-message
       set received-message 0
     ]
 
@@ -659,6 +668,7 @@ to update-beliefs
   update-visible-bubbles
   update-visible-gambozinos
   update-visible-urchins
+  update-known
 end
 
 ;;;
@@ -1143,7 +1153,7 @@ CHOOSER
 architecture
 architecture
 "reactive" "deliberative BDI" "BDI w/ emotions"
-0
+1
 
 INPUTBOX
 90
