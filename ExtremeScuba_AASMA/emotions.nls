@@ -35,10 +35,10 @@ to update-beliefs-candidates
 end
 
 to update-emotions-about-information
-  foreach known-bubbles [let id get-id-struct ? if id != who [set known-divers add-love known-divers id]]
-  foreach known-gambozinos [let id get-id-struct ? if id != who [set known-divers add-love known-divers id]]
-  foreach known-urchins [let id get-id-struct ? if id != who [set known-divers add-love known-divers id]]
-  foreach known-divers [let id get-id-struct ? if id != who [set known-divers add-love known-divers id]]
+  ;;foreach known-bubbles [let id get-id-struct ? if id != who [set known-divers add-love known-divers id]]
+  ;;foreach known-gambozinos [let id get-id-struct ? if id != who [set known-divers add-love known-divers id]]
+  ;;foreach known-urchins [let id get-id-struct ? if id != who [set known-divers add-love known-divers id]]
+  ;;foreach known-divers [let id get-id-struct ? if id != who [set known-divers add-love known-divers id]]
 end
 
 to update-beliefs-considering-emotions
@@ -46,58 +46,64 @@ end
 
 to-report BDI-filter-considering-emotions
   let objective 0
-  ifelse desire = "caught-oxygen"
+  ifelse desire = "caught-oxygen" 
   [
-      if empty? known-bubbles [report build-empty-intention]
-  ]
-  [
-    ifelse desire = "run-from-urchins"
+    if empty? known-bubbles [report build-empty-intention]
+    set objective one-of known-bubbles
+    report build-intention desire objective
+  ] ;;catch oxygen
+  [ifelse desire = "run-from-urchins"
     [
-      set objective min-one-of visible-urchins [distance myself]
-      ;;if objective = nobody [set objective min-one-of known-urchins [distance myself]]
-      ;;if objective = nobody [report build-empty-intention]
-      ifelse objective = nobody[
-        if empty? known-bubbles [report build-empty-intention]
-        set objective one-of known-bubbles
-      ]
-      [let id 0
-          ask objective [set id who]
-          set objective get-urchin-struct id]
+      set objective feared
 
       report build-intention desire objective
-    ]
-    [
-      if desire = "caught-gambozinos"
+     ];;run from feared
+    [if-else desire = "attack"
       [
-        set objective min-one-of visible-gambozinos [distance myself]
-        ;;if objective = nobody [set objective min-one-of known-gambozinos [distance myself]]
-        ifelse objective = nobody[
-          if empty? known-gambozinos [report build-empty-intention]
-          set objective one-of known-gambozinos
-        ]
-        [ let id 0
-          ask objective [set id who]
-          set objective get-gambozino-struct id]
-
+        set objective feared
 
         report build-intention desire objective
-      ]
-    ]
-  ]
+      ];;attack feared
+      [if-else desire = "help"
+        [
+          set objective loved
+
+          report build-intention desire objective
+        ];;haha
+        [if desire = "caught-gambozino"
+          [
+          if empty? known-gambozinos [report build-empty-intention]
+          set objective one-of known-gambozinos
+          report build-intention desire objective
+          ]
+    ]]]]
   report build-empty-intention
 end
 
 to-report BDI-options-considering-emotions
-  let loveds filter is-love? known-divers 
-  let angers filter is-anger? known-urchins
-  let fears filter is-fear? known-urchins
   
   
-  ifelse is-low-oxygen? [report "caught-oxygen"]
+  ifelse is-fear? and is-low-oxygen? [report "caught-oxygen"]
   [
-    ifelse is-low-health? and close-to-urchin? [report "run-from-urchins"]
+    if-else is-fear? and not empty? feared [report "run-from-urchins"]
     [
-      report "caught-gambozinos"
+      ifelse is-anger? and not empty? angered [report "attack-urchins"]
+      [
+        ifelse is-love? and not empty? loved[report "help"]
+        [report "caught-gambozinos"]
+      ]
     ]
   ]
+end
+
+to-report is-fear? 
+  report fear > 0.5
+end
+
+to-report is-love? 
+  report love > 0.5
+end
+
+to-report is-anger? 
+  report anger > 0.5
 end

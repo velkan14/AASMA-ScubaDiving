@@ -62,8 +62,11 @@ divers-own [
 
   ;;Things for emotions
   love
+  loved
   anger
+  angered
   fear
+  feared
   sadness
   happiness
 ]
@@ -194,6 +197,9 @@ to init-divers [ num ]
     set fear 0
     set sadness 0
     set happiness 0
+    set loved (list)
+    set angered (list)
+    set feared (list)
   ]
 end
 
@@ -687,8 +693,8 @@ to-report BDI-filter
       ;;if objective = nobody [set objective min-one-of known-urchins [distance myself]]
       ;;if objective = nobody [report build-empty-intention]
       ifelse objective = nobody[
-        if empty? known-bubbles [report build-empty-intention]
-        set objective one-of known-bubbles
+        if empty? known-urchins [report build-empty-intention]
+        set objective one-of known-urchins
       ]
       [let id 0
           ask objective [set id who]
@@ -1057,7 +1063,7 @@ INPUTBOX
 798
 79
 num-divers
-2
+10
 1
 0
 Number

@@ -10,7 +10,7 @@ to-report new-struct[aagent diver-id]
     set t my-type
     set id who
   ]
-  report (list x y t id diver-id 0 0 0 0 0)
+  report (list x y t id diver-id)
 end
 
 to-report get-xcor-struct [s]
@@ -33,24 +33,8 @@ to-report get-diver-id-struct [s]
   report item 4 s
 end
 
-to-report get-love-struct [s]
-  report item 5 s
-end
-
-to-report get-anger-struct [s]
-  report item 6 s
-end
-
-to-report get-fear-struct [s]
-  report item 7 s
-end
-
-to-report get-sadness-struct [s]
-  report item 8 s
-end
-
-to-report get-happiness-struct [s]
-  report item 9 s
+to-report set-diver-id-struct [s i]
+  report replace-item 4 s i
 end
 
 to-report set-xcor-struct [s x]
@@ -69,29 +53,7 @@ to-report set-id-struct [s i]
   report replace-item 3 s i
 end
 
-to-report set-diver-id-struct [s i]
-  report replace-item 4 s i
-end
 
-to-report set-love-struct [s l]
-  report replace-item 5 s l
-end
-
-to-report set-anger-struct [s a]
-  report replace-item 6 s a
-end
-
-to-report set-fear-struct [s f]
-  report replace-item 7 s f
-end
-
-to-report set-sadness-struct [s ss]
-  report replace-item 8 s ss
-end
-
-to-report set-happiness-struct [s h]
-  report replace-item 9 s h
-end
 
 to remove-known-gambozinos [id]
   let struct get-gambozino-struct id
@@ -117,7 +79,7 @@ to-report get-gambozino-struct [id]
   foreach known-gambozinos [if get-id-struct ? = id [report ?]]
   report nobody
 end
-
+ 
 to-report get-urchin-struct [id]
   foreach known-urchins [if get-id-struct ? = id [report ?]]
   report nobody
@@ -149,7 +111,7 @@ to-report add-new-struct [llist agent diver-id]
       set y ycor
       set t my-type
     ]
-    set struct (list x y t id diver-id get-love-struct struct get-anger-struct struct get-fear-struct struct get-sadness-struct struct get-happiness-struct struct)
+    set struct (list x y t id diver-id)
     report replace-item p llist struct
     ]
   report lput struct llist
@@ -177,31 +139,4 @@ to-report remove-to-struct [llist id]
     report remove-item p llist
     ]
   report llist
-end
-
-to-report add-love [llist id]
-  if exists-id? llist id [
-    let p 0
-    foreach llist [if get-id-struct ? = id [set p (position ? llist)]]
-    
-    let struct get-struct id llist
-    set struct set-love-struct struct (get-love-struct struct + 0.1)
-    report replace-item p llist struct
-]
-  report llist
-end
-
-to-report is-love? [l]
-  if get-love-struct l > 0.5 [report true]
-  report false
-end
-
-to-report is-anger? [l]
-  if get-anger-struct l > 0.5 [report true]
-  report false
-end
-
-to-report is-fear? [l]
-  if get-fear-struct l > 0.5 [report true]
-  report false
 end
