@@ -3,6 +3,7 @@ to divers-deliberative-BDI-emotions-loop
   ;;[stop]
   
   set last-action ""
+  ;;print intention
   ifelse not (empty-plan? plan or intention-succeeded? intention or impossible-intention? intention)
   [
     execute-plan-action
@@ -14,20 +15,20 @@ to divers-deliberative-BDI-emotions-loop
   ]
   [
     update-beliefs-candidates
-    update-emotions-about-information
+    update-emotions
     ;; Check the robot's options
     set desire BDI-options-considering-emotions
     set intention BDI-filter-considering-emotions
     set plan build-plan-for-intention intention
     update-emotions-about-information
     ;; If it could not build a plan, the robot should behave as a reactive agent
-    print plan
-    print word "Fear: " fear
-    print word "Love: " love
-    print word "Anger: " anger
-    print word "Happy: " happiness
-    print word "Sad: " sadness
-    print known-gambozinos
+    ;;print plan
+    ;;print word "Fear: " fear
+    ;;print word "Love: " love
+    ;;print word "Anger: " anger
+    ;;print word "Happy: " happiness
+    ;;print word "Sad: " sadness
+    
     if(empty-plan? plan)
       [divers-reactive-loop]
   ]
@@ -41,17 +42,19 @@ to update-beliefs-candidates
   update-known
 end
 
+to update-emotions
+  foreach known-bubbles [let id get-diver-id-struct ? if id != who [set love increase-emotion love 0.8 set loved ?]]
+  foreach known-gambozinos [let id get-diver-id-struct ? if id != who [set love increase-emotion love 0.8 set loved ?]]
+  foreach known-urchins [let id get-diver-id-struct ? if id != who [set love increase-emotion love 0.8 set loved ?]]
+  foreach known-divers [let id get-diver-id-struct ? if id != who [set love increase-emotion love 0.8 set loved ?]]
+end
+
 to update-emotions-about-information
   set anger decrease-emotion anger 0.05
   set love decrease-emotion love 0.01
   if not is-low-oxygen? [set  fear decrease-emotion fear 0.01]
   set happiness decrease-emotion happiness 0.01
   set sadness increase-emotion sadness 0.02
-  
-  ;;foreach known-bubbles [let id get-id-struct ? if id != who [set known-divers add-love known-divers id]]
-  ;;foreach known-gambozinos [let id get-id-struct ? if id != who [set known-divers add-love known-divers id]]
-  ;;foreach known-urchins [let id get-id-struct ? if id != who [set known-divers add-love known-divers id]]
-  ;;foreach known-divers [let id get-id-struct ? if id != who [set known-divers add-love known-divers id]]
 end
 
 to update-beliefs-considering-emotions

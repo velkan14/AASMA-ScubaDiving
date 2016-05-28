@@ -77,17 +77,17 @@ end
 
 to-report get-gambozino-struct [id]
   foreach known-gambozinos [if get-id-struct ? = id [report ?]]
-  report nobody
+  report (list)
 end
 
 to-report get-urchin-struct [id]
   foreach known-urchins [if get-id-struct ? = id [report ?]]
-  report nobody
+  report (list)
 end
 
 to-report get-bubble-struct [id]
   foreach known-bubbles [if get-id-struct ? = id [report ?]]
-  report nobody
+  report (list)
 end
 
 to-report exists-id? [llist id]

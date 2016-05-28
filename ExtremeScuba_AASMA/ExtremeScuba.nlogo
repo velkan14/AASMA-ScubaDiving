@@ -315,7 +315,7 @@ to-report patch-ahead-clear?
   report result
 end
 
-to-report has-received-message
+to-report has-received-message?
   report received-message = 1
 end
 
@@ -452,7 +452,7 @@ to move
 end
 
 to share [id]
-  let diver one-of (divers in-cone urchin-distance 360) with [id = who]
+  let diver one-of (divers in-cone urchin-distance 360) ;;with [id = who]
   if diver != nobody
   [
     let o 0
@@ -482,7 +482,7 @@ to divers-loop
   update-visible-gambozinos
   update-visible-urchins
 
-  if has-received-message
+  if has-received-message?
     [
       read-message
       set received-message 0
@@ -504,7 +504,7 @@ to divers-reactive-loop
     [
       ifelse can-attack-gambozinos? [attack-gambozino]
       [
-        ifelse close-to-diver? [communicate]
+        ifelse close-to-diver? and random-float 1 < 0.05 [communicate]
         [
           ifelse patch-ahead-clear? and random-float 1 < 0.8 [ move]
           [rotate-random]
@@ -701,8 +701,13 @@ to-report intention-succeeded? [iintention]
   ifelse(ddesire = "caught-oxygen")[ report oxygen = 100 ]
     [ifelse(ddesire = "run-from-urchins")
       [ report not close-to-urchin?]
-      [if(ddesire = "caught-gambozinos")
-        [ report get-intention-agent iintention = nobody] ;;FIXME
+      [ifelse(ddesire = "caught-gambozinos")
+        [ report false] ;;FIXME
+        [ifelse (ddesire = "help")
+          [report false]
+          [if (ddesire = "attack-urchins")
+            [report empty? angered]
+            ]]
       ]
     ]
 end
@@ -1157,7 +1162,7 @@ INPUTBOX
 581
 79
 num-bubbles
-0
+20
 1
 0
 Number
@@ -1168,7 +1173,7 @@ INPUTBOX
 798
 79
 num-divers
-1
+10
 1
 0
 Number
@@ -1179,7 +1184,7 @@ INPUTBOX
 684
 79
 num-urchins
-40
+0
 1
 0
 Number
@@ -1190,7 +1195,7 @@ INPUTBOX
 483
 80
 num-gambozinos
-0
+20
 1
 0
 Number
